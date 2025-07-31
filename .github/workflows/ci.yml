@@ -1,0 +1,36 @@
+# ci.yml:
+#   在推送代码到 master 分支时触发
+#   使用 Ubuntu 环境，安装 Python 和 mkdocs-material
+#   执行 mkdocs gh-deploy，将网站构建并推送到 GitHub Pages 专用的 gh-pages 分支
+name: ci 
+on:
+  push:
+    branches:
+      - master 
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure Git Credentials
+        run: |
+          git config user.name Coredump 
+          git config user.email coooredump@gmail.com 
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.x
+      - run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV 
+
+      - uses: actions/cache@v3
+        with:
+          key: mkdocs-material-${{ env.cache_id }}
+          path: .cache
+          restore-keys: |
+            mkdocs-material-
+      - run: pip install mkdocs-material 
+      - run: mkdocs gh-deploy --force

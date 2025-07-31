@@ -1,0 +1,5 @@
+site_name: Coredump
+site_url: https://coooredump.github.io/
+site_author: Yikun Wu
+theme:
+  name: material
