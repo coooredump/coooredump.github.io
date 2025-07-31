@@ -1,14 +1,14 @@
 # Project Information
-site_name: OI Wiki
+site_name: Coredump
 site_description: OI Wiki 是一个编程竞赛知识整合站点，提供有趣又实用的编程竞赛知识以及其他有帮助的内容，帮助广大编程竞赛爱好者更快更深入地学习编程竞赛
-site_author: OI Wiki Team
-site_url: https://oi-wiki.org
+site_author: coooredump
+site_url: https://coooredump.github.io/
 strict: false
 
 # Repository
-repo_name: 'OI-wiki/OI-wiki'
-repo_url: 'https://github.com/OI-wiki/OI-wiki'
-edit_uri: 'https://oi-wiki.org/edit-landing/?ref='
+repo_name: 'coooredump/coooredump.github.io'
+repo_url: 'https://github.com/coooredump/coooredump.github.io'
+edit_uri: 'https://coooredump.github.io/edit-landing/?ref='
 
 # Copyright
 copyright: 'Copyright &copy; 2016 - 2025 OI Wiki Team'
@@ -560,7 +560,7 @@ theme:
   search_index_only: true
   favicon: 'favicon.ico'
   icon:
-    logo: 'material/school'
+    logo: 'material/kun'
   features:
     - content.action.edit
     - navigation.tabs
