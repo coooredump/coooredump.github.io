@@ -6,7 +6,6 @@ tags:
   - Waline
   - Vercel
   - Supabase
-heroImage: { src: './thumbnail.jpg', color: '#64574D' }
 language: 'English'
 ---
 

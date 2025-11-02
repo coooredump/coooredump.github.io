@@ -100,7 +100,10 @@ const typographyConfig = {
         'border-radius': 'var(--radius)',
         'background-color': 'hsl(var(--muted) / var(--un-bg-opacity, 1))'
       },
-      ':not(pre)>code::before,:not(pre)>code::after': {
+      ':not(pre)>code::before': {
+        content: 'none'
+      },
+      ':not(pre)>code::after': {
         content: 'none'
       }
     }),
