@@ -1,0 +1,362 @@
+---
+title: 全闪存阵列｜mdadm 实操
+description: 要将 4 个 SSD 组成一个 All-flash Array，可以通过 RAID 技术来完成，常见的方式是使用 Linux 软件 RAID（mdadm）来配置一个 RAID 阵列。这些 SSD 可以通过不同的 RAID 模式（如 RAID 0、RAID 1、RAID 5、RAID 10 等）组合在一起，具体选择哪种 RAID 取决于你对性能、冗余和容错的需求。
+publishDate: 2024-12-28
+tags: [系统与体系结构]
+heroImage: { src: ../_img/202501222240708.png }
+language: Chinese
+comment: true
+draft: false
+---
+
+## 全闪存阵列搭建｜`mdadm` 实操
+
+用以下 4 个 SSD 组全闪存阵列（All-Flash Array），与组 raid 同法，简单记录下。
+
+```bash
+$ lsblk -f
+NAME        FSTYPE   LABEL UUID FSAVAIL FSUSE% MOUNTPOINT
+loop0       squashfs 			0   100% /snap/core20/2379
+loop1       squashfs			0   100% /snap/lxd/24061
+loop2       squashfs 			0   100% /snap/snapd/21759
+loop3       squashfs 			0   100% /snap/core20/2434
+loop4       squashfs 			0   100% /snap/lxd/29619
+loop5       squashfs 			0   100% /snap/snapd/23258
+sda         ext4           a35cd456-e07a-4d50-8118-1556a18a6971                
+sdb         ext4           e2a3bb45-0b9b-4d0c-b9db-192dbc1b507e                
+sdc         ext4           39a9734c-bfc2-4a6e-99b5-de18082385f8                
+sdd         ext4           5f8065ab-88e5-47a5-9729-c1b3c286bf73                
+```
+
+要将 4 个 SSD 组成一个 **All-flash Array**，可以通过 RAID 技术来完成，常见的方式是使用 **Linux 软件 RAID**（`mdadm`）来配置一个 RAID 阵列。这些 SSD 可以通过不同的 RAID 模式（如 RAID 0、RAID 1、RAID 5、RAID 10 等）组合在一起，具体选择哪种 RAID 取决于你对性能、冗余和容错的需求。
+
+### 步骤 1：安装 `mdadm` 工具
+
+`mdadm` 是用于创建和管理 Linux 软件 RAID 阵列的工具。如果你的系统上没有安装 `mdadm`，可以使用以下命令进行安装：
+
+> Ubuntu/Debian 系列
+
+```bash
+sudo apt update
+sudo apt install mdadm
+```
+
+### 步骤 2：清除磁盘上的现有数据
+
+在创建 RAID 阵列之前，你需要确保所有磁盘上没有任何分区或者已有数据。可以使用 `wipefs` 命令清除磁盘上的任何现有文件系统和分区信息：
+
+```bash
+sudo wipefs --all /dev/sda
+sudo wipefs --all /dev/sdb
+sudo wipefs --all /dev/sdc
+sudo wipefs --all /dev/sdd
+```
+
+### 步骤 3：创建 RAID 阵列
+
+决定你需要哪种 RAID 级别（0、1、5、10）。以下是几种常见 RAID 阵列的说明：
+
+- **RAID 0**（条带化）：提供最高性能，但没有冗余，任何磁盘故障都会导致数据丢失。
+- **RAID 1**（镜像）：提供数据冗余，但只使用两个磁盘，容量是最小磁盘大小的两倍。
+- **RAID 5**（带奇偶校验的条带化）：提供冗余和良好的性能，至少需要 3 个磁盘。
+- **RAID 10**（1+0，镜像 + 条带化）：提供较好的性能和冗余，至少需要 4 个磁盘。
+
+#### 创建 RAID 0（条带化）阵列
+
+如果你的目标是最大化性能，可以选择 RAID 0：
+
+```bash
+sudo mdadm --create /dev/md0 --level=0 --raid-devices=4 /dev/sda /dev/sdb /dev/sdc /dev/sdd
+```
+
+这将创建一个包含 4 个磁盘的 RAID 0 阵列，设备名为 `/dev/md0`
+
+#### 创建 RAID 1（镜像）阵列
+
+如果你希望有更高的冗余（需要两对磁盘进行镜像），你可以选择 RAID 1：
+
+```bash
+sudo mdadm --create /dev/md0 --level=1 --raid-devices=2 /dev/sda /dev/sdb
+sudo mdadm --create /dev/md1 --level=1 --raid-devices=2 /dev/sdc /dev/sdd
+```
+
+这会创建两个 RAID 1 阵列，每对磁盘形成一个镜像。
+
+#### 创建 RAID 5（带奇偶校验的条带化）阵列
+
+如果你希望实现性能和冗余的平衡，RAID 5 是一个不错的选择，它提供奇偶校验，能够承受一个磁盘故障：
+
+```bash
+sudo mdadm --create /dev/md0 --level=5 --raid-devices=4 /dev/sda /dev/sdb /dev/sdc /dev/sdd
+```
+
+#### 创建 RAID 10（镜像 + 条带化）阵列
+
+RAID 10 提供了较好的性能和冗余，适合需要较高性能和数据保护的应用：
+
+```bash
+sudo mdadm --create /dev/md0 --level=10 --raid-devices=4 /dev/sda /dev/sdb /dev/sdc /dev/sdd
+```
+
+### 步骤 4：查看 RAID 阵列状态
+
+创建 RAID 阵列后，使用以下命令来检查阵列的状态：
+
+```bash
+sudo mdadm --detail /dev/md0
+```
+
+这将显示 `/dev/md0` 阵列的详细信息，包括阵列的健康状态、磁盘的状态等。
+
+![image-20241228041941123](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202412280419697.png)
+
+### 步骤 5：格式化 RAID 阵列
+
+创建 RAID 阵列后，你需要为其创建文件系统。通常使用 `ext4` 或 `xfs` 文件系统。以下是格式化 RAID 阵列的命令：
+
+```bash
+sudo mkfs.ext4 /dev/md0
+```
+
+### 步骤 6：挂载 RAID 阵列
+
+创建并格式化 RAID 阵列后，你需要将其挂载到文件系统中。
+
+```bash
+sudo mkdir /mnt/raid
+sudo mount /dev/md0 /mnt/raid
+```
+
+### 步骤 7：自动挂载 /etc/fstab
+
+如果你希望在每次启动时自动挂载 RAID 阵列，可以将其添加到 `/etc/fstab` 文件中。
+
+```bash
+# 首先，获取阵列的 UUID
+sudo blkid /dev/md0
+```
+
+然后编辑 `/etc/fstab` 文件并添加以下行：
+
+```shell
+UUID=<uuid_from_blkid> /mnt/raid ext4 defaults 2 0
+```
+
+### 步骤 8：监控和管理
+
+使用 `mdadm` 来监控 RAID 阵列的状态，并检查是否有任何磁盘故障或阵列问题。
+
+```bash
+sudo mdadm --detail /dev/md0
+```
+
+针对 AFA 的读写放大问题，可以采用以下这条流程测试和监控：
+
+### ✍️ 番外篇：iostat 监测磁盘 I/O｜fio 压测
+
+#### 1️⃣ 使用 `iostat` 监控磁盘 I/O
+
+`iostat` 可以显示磁盘的读写性能，但它并不直接提供写放大倍数。不过你可以通过 **总写入量** 和 **实际写入量** 来间接推算。例如：
+
+```bash
+iostat -x 1
+```
+
+![image-20241228042922699](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202412280429861.png)
+
+详细信息解释：
+
+**avg-cpu**：显示 CPU 使用情况的平均值：
+
+- `%user`：用户空间的 CPU 使用率
+- `%nice`：以较低优先级运行的进程使用的 CPU 时间百分比
+- `%system`：内核空间的 CPU 使用率
+- `%iowait`：等待 I/O 操作完成时的 CPU 空闲时间百分比
+- `%steal`：虚拟化环境中，被虚拟机监控程序抢占的 CPU 时间百分比
+- `%idle`：CPU 空闲时间百分比
+
+磁盘 I/O 信息：
+
+- **r/s**：每秒读取的请求数（I/O 操作次数）
+- **w/s**：每秒写入的请求数
+- **rkB/s**：每秒读取的数据量（KB）
+- **wkB/s**：每秒写入的数据量（KB）
+- **rrqm/s**: 每秒合并读操作的次数
+- **wrqm/s**: 每秒合并写操作的次数
+- **r_await**：每个读操作平均所需要的时间，不仅包括硬盘设备读操作的时间，也包括在内核队列中的时间
+- **w_await**：每个写操平均所需要的时间，不仅包括硬盘设备写操作的时间，也包括在队列中等待的时间
+- **svctm**：I/O 服务时间（毫秒），表示请求处理的平均时间
+- **%util**：设备的利用率，表示磁盘 I/O 操作的占用程度，如果值接近 100%，说明磁盘已经达到饱和
+
+这个命令会每秒输出一次磁盘的读写性能，包括每个磁盘的读写 I/O 操作次数和每秒的字节数
+
+---
+
+`iostat` 命令的主要功能是展示每个磁盘（包括 RAID 阵列的虚拟磁盘）以及 CPU 的利用情况，显示磁盘设备的 I/O 性能指标，如每秒的读写字节数、I/O 请求数、等待时间等。
+
+常用的 `iostat` 参数
+
+- `-c`：显示 CPU 使用情况
+- `-d`：显示磁盘设备的 I/O 统计信息
+- `-x`：显示磁盘设备的扩展统计信息（如磁盘的响应时间、队列长度等）
+- `-k`：以 KB 为单位显示数据（默认单位为字节）
+- `-m`：以 MB 为单位显示数据
+- `-t`：显示时间戳
+- `-p`：显示分区的统计信息
+- `-z`：仅显示有 I/O 操作的设备，不显示没有活动的设备
+- `interval`：更新统计信息的时间间隔，单位为秒
+
+```bash
+$ iostat [options] [interval] [count]
+```
+
+- `interval`：统计的更新频率，单位为秒。例如，每 5 秒刷新一次统计信息。
+- `count`：显示多少次统计信息。例如，`iostat 5 3` 表示每隔 5 秒输出一次统计信息，总共输出 3 次。
+
+
+
+#### 2️⃣ 使用 `fio` 进行基准测试
+
+`fio` 可以用来生成 I/O 工作负载，测试不同类型的读写模式，从而间接估算 RAID 阵列和 SSD 的性能表现。
+
+你可以通过特定的测试配置来模拟写操作，并计算写放大，比如：
+
+```bash
+# 全盘顺序写
+sudo fio \
+  --name=seq_write_test \
+  --filename=/dev/md0 \
+  --size=100% \
+  --bs=4k \
+  --rw=write \
+  --iodepth=64 \
+  --numjobs=4 \
+  --direct=1
+
+# 全盘随机写
+sudo fio \
+  --name=rand_write_test \
+  --filename=/dev/md0 \
+  --size=100% \
+  --bs=4k \
+  --rw=randwrite \
+  --iodepth=64 \
+  --numjobs=4 \
+  --direct=1
+```
+
+#### 3️⃣ 使用 `smartctl` 检查磁盘/硬盘状态
+
+`smartctl` 检查和控制硬盘驱动器（HDD）和固态硬盘（SSD）SMART（Self-Monitoring, Analysis, and Reporting Technology）状态，`smartctl` 工具可以提供磁盘的健康状况、温度、错误信息等，通常用于监控单个硬盘的健康状况。
+
+不过 smartctl 只能查看单个磁盘/硬盘的 SMART 数据，**无法直接查看整个 RAID 阵列（如 `/dev/md0`）的读写放大（Write Amplification）情况**。
+
+```bash
+wyk 20:20:37 ~
+$ sudo smartctl -a /dev/sda
+smartctl 7.1 2019-12-30 r5022 [x86_64-linux-5.4.0-198-generic] (local build)
+Copyright (C) 2002-19, Bruce Allen, Christian Franke, www.smartmontools.org
+
+=== START OF INFORMATION SECTION ===
+Device Model:     Fanxiang S103Pro 1TB
+Serial Number:    2036E4AD5054
+LU WWN Device Id: 5 00a075 1e4ad5054
+Firmware Version: 22Z4VBND
+User Capacity:    1,000,204,886,016 bytes [1.00 TB]
+Sector Sizes:     512 bytes logical, 4096 bytes physical
+Rotation Rate:    Solid State Device
+Form Factor:      2.5 inches
+Device is:        Not in smartctl database [for details use: -P showall]
+ATA Version is:   ACS-3 T13/2161-D revision 5
+SATA Version is:  SATA 3.3, 6.0 Gb/s (current: 6.0 Gb/s)
+Local Time is:    Fri Dec 27 20:21:44 2024 UTC
+SMART support is: Available - device has SMART capability.
+SMART support is: Enabled
+
+=== START OF READ SMART DATA SECTION ===
+SMART overall-health self-assessment test result: PASSED
+
+General SMART Values:
+Offline data collection status:  (0x80) Offline data collection activity
+                                        was never started.
+                                        Auto Offline Data Collection: Enabled.
+Self-test execution status:      (   0) The previous self-test routine completed
+                                        without error or no self-test has ever 
+                                        been run.
+Total time to complete Offline 
+data collection:                (    0) seconds.
+Offline data collection
+capabilities:                    (0x7b) SMART execute Offline immediate.
+                                        Auto Offline data collection on/off support.
+                                        Suspend Offline collection upon new
+                                        command.
+                                        Offline surface scan supported.
+                                        Self-test supported.
+                                        Conveyance Self-test supported.
+                                        Selective Self-test supported.
+SMART capabilities:            (0x0002) Does not save SMART data before
+                                        entering power-saving mode.
+                                        Supports SMART auto save timer.
+Error logging capability:        (0x01) Error logging supported.
+                                        General Purpose Logging supported.
+Short self-test routine 
+recommended polling time:        (   2) minutes.
+Extended self-test routine
+recommended polling time:        (  30) minutes.
+Conveyance self-test routine
+recommended polling time:        (   2) minutes.
+SCT capabilities:              (0x0031) SCT Status supported.
+                                        SCT Feature Control supported.
+                                        SCT Data Table supported.
+
+SMART Attributes Data Structure revision number: 16
+Vendor Specific SMART Attributes with Thresholds:
+ID# ATTRIBUTE_NAME          FLAG     VALUE WORST THRESH TYPE      UPDATED  WHEN_FAILED RAW_VALUE
+  1 Raw_Read_Error_Rate     0x0000   100   100   000    Old_age   Offline      -       0
+  5 Reallocated_Sector_Ct   0x0000   100   100   000    Old_age   Offline      -       0
+  9 Power_On_Hours          0x0000   100   100   000    Old_age   Offline      -       575
+ 12 Power_Cycle_Count       0x0000   100   100   000    Old_age   Offline      -       52
+148 Unknown_Attribute       0x0000   100   100   000    Old_age   Offline      -       37557
+149 Unknown_Attribute       0x0000   100   100   000    Old_age   Offline      -       302
+150 Unknown_Attribute       0x0000   100   100   000    Old_age   Offline      -       78
+151 Unknown_Attribute       0x0000   100   100   000    Old_age   Offline      -       146
+159 Unknown_Attribute       0x0000   100   100   000    Old_age   Offline      -       0
+160 Unknown_Attribute       0x0000   100   100   000    Old_age   Offline      -       0
+161 Unknown_Attribute       0x0000   100   100   000    Old_age   Offline      -       93
+163 Unknown_Attribute       0x0000   100   100   000    Old_age   Offline      -       23
+164 Unknown_Attribute       0x0000   100   100   000    Old_age   Offline      -       16394
+165 Unknown_Attribute       0x0000   100   100   000    Old_age   Offline      -       14
+166 Unknown_Attribute       0x0000   100   100   000    Old_age   Offline      -       1
+167 Unknown_Attribute       0x0000   100   100   000    Old_age   Offline      -       5
+168 Unknown_Attribute       0x0000   100   100   000    Old_age   Offline      -       3000
+169 Unknown_Attribute       0x0000   100   100   000    Old_age   Offline      -       100
+177 Wear_Leveling_Count     0x0000   100   100   050    Old_age   Offline      -       3751
+181 Program_Fail_Cnt_Total  0x0000   100   100   000    Old_age   Offline      -       0
+182 Erase_Fail_Count_Total  0x0000   100   100   000    Old_age   Offline      -       0
+192 Power-Off_Retract_Count 0x0000   100   100   000    Old_age   Offline      -       7
+194 Temperature_Celsius     0x0000   100   100   000    Old_age   Offline      -       25
+195 Hardware_ECC_Recovered  0x0000   100   100   000    Old_age   Offline      -       0
+196 Reallocated_Event_Count 0x0000   100   100   016    Old_age   Offline      -       0
+199 UDMA_CRC_Error_Count    0x0000   100   100   050    Old_age   Offline      -       0
+232 Available_Reservd_Space 0x0000   100   100   000    Old_age   Offline      -       100
+241 Total_LBAs_Written      0x0000   100   100   000    Old_age   Offline      -       144248
+242 Total_LBAs_Read         0x0000   100   100   000    Old_age   Offline      -       102956
+245 Unknown_Attribute       0x0000   100   100   000    Old_age   Offline      -       172137
+
+SMART Error Log Version: 1
+No Errors Logged
+
+SMART Self-test log structure revision number 1
+No self-tests have been logged.  [To run self-tests, use: smartctl -t]
+
+SMART Selective self-test log data structure revision number 1
+ SPAN  MIN_LBA  MAX_LBA  CURRENT_TEST_STATUS
+    1        0        0  Not_testing
+    2        0        0  Not_testing
+    3        0        0  Not_testing
+    4        0        0  Not_testing
+    5        0        0  Completed [00% left] (0-65535)
+Selective self-test flags (0x0):
+  After scanning selected spans, do NOT read-scan remainder of disk.
+If Selective self-test is pending on power-up, resume after 0 minute delay.
+```

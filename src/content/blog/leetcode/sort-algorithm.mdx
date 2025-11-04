@@ -1,0 +1,171 @@
+---
+title: 排序数组（堆排、快排、归排）
+description: 解构三个经典排序算法：Heap Sort & Quick Sort & Merge Sort
+publishDate: 2025-04-28
+tags: [leetcode]
+heroImage: { src: ../_img/202501222250241.jpeg }
+language: Chinese
+comment: true
+draft: false
+---
+
+## 1️⃣ 堆排序
+
+```cpp
+class Solution {
+public:
+    // 向下调整
+    void heapify(vector<int>& nums, int i, int n) {
+        int largest = i;
+        int left = i * 2 + 1;
+        int right = i * 2 + 2;
+        if (left < n && nums[left] > nums[largest])
+            largest = left;
+        if (right < n && nums[right] > nums[largest])
+            largest = right;
+        if (largest != i) {
+            swap(nums[largest], nums[i]);
+            heapify(nums, largest, n);
+        }
+    }
+
+    void heapsort(vector<int>& nums) {
+        int n = nums.size();
+        // i = n / 2 也可, 多判断一次而已
+        // 向上初始化构建, 获取数组最大值
+        for (int i = n / 2 - 1; i >= 0; i--) {
+            heapify(nums, i, n);
+        }
+        // 最大值不断调整到末尾, 并对新元素 nums[0] 向下进行调整
+        for (int i = n - 1; i >= 0; i--) {
+            swap(nums[i], nums[0]);
+            heapify(nums, 0, i);    // 每次都从 0 开始调整
+        }
+    }
+
+    vector<int> sortArray(vector<int>& nums) {
+        heapsort(nums);
+        return nums;
+    }
+};
+```
+
+## 2️⃣ 快速排序（朴素版）
+
+```cpp
+class Solution {
+public:
+    int partition(vector<int>& nums, int l, int r) {
+        int pivot = nums[l];
+        int i = l, j = r + 1;
+        while (i < j) {
+            // while (i < r && nums[++i] < pivot) 也可
+            while (++i < r && nums[i] < pivot)
+                ;
+            // while (j > l && nums[--j] > pivot) 也可
+            while (--j > l && nums[j] > pivot)
+                ;
+            if (i < j) {
+                swap(nums[i], nums[j]);
+            }
+        }
+        swap(nums[l], nums[j]);
+        return j;
+    }
+
+    void quicksort(vector<int>& nums, int l, int r) {
+        if (l < r) {
+            int pivot = partition(nums, l, r);
+            quicksort(nums, l, pivot - 1);
+            quicksort(nums, pivot + 1, r);
+        }
+    }
+
+    vector<int> sortArray(vector<int>& nums) {
+        quicksort(nums, 0, nums.size() - 1);
+        return nums;
+    }
+};
+```
+
+## 3️⃣ 快速排序（随机版 · 性能🔝）
+
+```cpp
+class Solution {
+public:
+    int partition(vector<int>& nums, int l, int r) {
+        int pivot = nums[l];
+        int i = l, j = r + 1;
+        while (i < j) {
+            while (++i < r && nums[i] < pivot)
+                ;
+            while (--j > l && nums[j] > pivot)
+                ;
+            if (i < j) {
+                swap(nums[i], nums[j]);
+            }
+        }
+        swap(nums[l], nums[j]);
+        return j;
+    }
+
+    int randomized_partition(vector<int>& nums, int l, int r) {
+        int i = l + rand() % (r - l + 1);
+        swap(nums[i], nums[l]);
+        return partition(nums, l, r);
+    }
+
+    void quicksort(vector<int>& nums, int l, int r) {
+        if (l < r) {
+            int pivot = randomized_partition(nums, l, r);
+            quicksort(nums, l, pivot - 1);
+            quicksort(nums, pivot + 1, r);
+        }
+    }
+
+    vector<int> sortArray(vector<int>& nums) {
+        quicksort(nums, 0, nums.size() - 1);
+        return nums;
+    }
+};
+```
+
+## 4️⃣ 归并排序
+
+```cpp
+class Solution {
+public:
+    void merge(vector<int>& nums, int l, int m, int r) {
+        int i = l, j = m + 1, k = 0;
+        vector<int> temp(r - l + 1);
+        while (i <= m || j <= r) {
+            if (i > m) {
+                temp[k++] = nums[j++];
+            } else if (j > r) {
+                temp[k++] = nums[i++];
+            } else if (nums[i] < nums[j]) {
+                temp[k++] = nums[i++];
+            } else {
+                temp[k++] = nums[j++];
+            }
+        }
+        for (int idx = 0; idx < (r - l + 1); idx++) {
+            nums[l + idx] = temp[idx];
+        }
+    }
+
+    void mergesort(vector<int>& nums, int l, int r) {
+        if (l >= r)
+            return;
+        int m = (l + r) / 2;
+        mergesort(nums, l, m);
+        mergesort(nums, m + 1, r);
+        merge(nums, l, m, r);
+    }
+
+    vector<int> sortArray(vector<int>& nums) {
+        mergesort(nums, 0, nums.size() - 1);
+        return nums;
+    }
+};
+```

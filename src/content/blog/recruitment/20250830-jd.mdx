@@ -1,0 +1,332 @@
+---
+title: 2025.08.30 京东笔试题
+description: 京东 20250830 笔试解析
+publishDate: 2025-08-30
+tags: [秋招指南]
+heroImage: { src: ../_img/20250831-FnzK8P.png }
+language: Chinese
+comment: true
+draft: false
+---
+
+> 题解链接：https://mp.weixin.qq.com/s/M-YBVRdoGuKu9ZS9roUFVA
+>
+> 测评链接：https://niumacode.com/training/184
+
+## 1. 定向越野
+
+现在有赛事要在一山区举行，山区内有 $n$ 个打卡点（编号为 1~n），打卡点之间有 $m$ 条可供通行的山路，每条山路都需要花费确定的通行时间（单位：分钟）。赛事要求选手从“起点打卡点”出发，最终到达“终点打卡点”。 组委会在某两个打卡点 A 和 B 之间设置了一条特殊索道，选手可以通过该索道在这两个打卡点之间瞬间往返（不消耗时间）。 请计算选手从起点到终点的最短通行时间（保证存在可达路径）。
+
+> 输入描述
+
+- 第一行两个正整数 $n, m$ ，分别表示打卡点总数和山路数量。
+- 第二行两个正整数，分别表示“起点打卡点”和“终点打卡点”的编号。
+- 第三行两个正整数，分别表示设有特殊索道的两个打卡点的编号。
+- 接下来 $m$ 行，每行三个正整数 $u, v, t$，分别表示打卡点 $u$ 和 $v$ 之间有一条山路，双向通行，通过该山路需要耗时 $t$ 分钟。
+- $1 ≤ n ≤ 100, 1 ≤ m ≤ 2 * n$，每条道路的时间花费在 $[1, 10]$ 之间。
+
+> 输出描述
+
+- 一个整数表示最短通行时间。
+
+> 输入
+
+```
+6 5
+2 6
+3 5
+3 3 3
+3 4 2
+4 5 1
+5 6 4
+2 4 5
+```
+
+> 输出
+
+```
+7
+```
+
+> 代码 1：Floyd 算法
+
+把“索道”视为一条权值为 0 的无向边 `(A, B)`。 用 Floyd-Warshall 求全源最短路，直接得到所有点对最短距离。最终答案就是 `dist[s][e]`。
+
+复杂度：
+
+- 时间：$O(n^3)$（n ≤ 100，可承受）
+- 空间：$O(n^2)$
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int n, m;
+    if (!(cin >> n >> m))
+        return 0;
+    int s, e, A, B;
+    cin >> s >> e >> A >> B;
+
+    const long long INF = (long long)1e15;
+    vector<vector<long long>> d(n + 1, vector<long long>(n + 1, INF));
+    for (int i = 1; i <= n; i++)
+        d[i][i] = 0;
+
+    for (int i = 0; i < m; i++) {
+        int u, v, w;
+        cin >> u >> v >> w;
+        if (w < d[u][v]) {
+            d[u][v] = w;
+            d[v][u] = w; // 无向边
+        }
+    }
+
+    // 索道 0 费用
+    d[A][B] = d[B][A] = 0;
+
+    // Floyd
+    for (int k = 1; k <= n; k++) {
+        for (int i = 1; i <= n; i++) {
+            if (d[i][k] == INF)
+                continue;
+            for (int j = 1; j <= n; j++) {
+                long long v = d[i][k] + d[k][j];
+                if (v < d[i][j])
+                    d[i][j] = v;
+            }
+        }
+    }
+
+    cout << d[s][e] << "\n";
+    return 0;
+}
+```
+
+> 代码 2：堆优化版的 Dijkstra 算法
+
+直接使用 dijkstra 直接计算带权无向图单源最短路径，索道就是 0 权重的边。
+
+- 这里使用的是「[堆优化版的 dijkstra 算法](https://cotenite.github.io/blog/algorithm/%E6%90%9C%E7%B4%A2%E4%B8%8E%E5%9B%BE%E8%AE%BA.html#%E5%A0%86%E4%BC%98%E5%8C%96%E7%89%88%E7%9A%84dijkstar%E7%AE%97%E6%B3%95)」
+
+```cpp
+#include <iostream>
+#include <vector>
+#include <queue>
+#include <climits>
+using namespace std;
+
+typedef pair<int, int> pii; // (distance, node)
+
+void dijkstra(int start, vector<vector<pii>>& graph, vector<int>& dist) {
+    int n = graph.size();
+    dist.assign(n, INT_MAX);
+    priority_queue<pii, vector<pii>, greater<pii>> pq;
+    dist[start] = 0;
+    pq.push({0, start});
+    while (!pq.empty()) {
+        int u = pq.top().second;
+        int d = pq.top().first;
+        pq.pop();
+        if (d != dist[u]) continue;
+        for (auto& edge : graph[u]) {
+            int v = edge.first;
+            int w = edge.second;
+            if (dist[u] + w < dist[v]) {
+                dist[v] = dist[u] + w;
+                pq.push({dist[v], v});
+            }
+        }
+    }
+}
+
+int main() {
+    int n, m;
+    cin >> n >> m;
+    int S, T;
+    cin >> S >> T;
+    int A, B;
+    cin >> A >> B;
+    
+    vector<vector<pii>> graph(n+1);
+    for (int i = 0; i < m; i++) {
+        int u, v, t;
+        cin >> u >> v >> t;
+        graph[u].push_back({v, t});
+        graph[v].push_back({u, t});
+    }
+    
+    // 添加特殊索道：A和B之间双向0成本
+    graph[A].push_back({B, 0});
+    graph[B].push_back({A, 0});
+    
+    vector<int> dist;
+    dijkstra(S, graph, dist);
+    
+    cout << dist[T] << endl;
+    
+    return 0;
+}
+```
+
+## 2. 上升子序列
+
+给定一个长为 $n$ 的排列 $\{a\}$，排列是指 $\{a\}$ 中包含 $1～n$ 的所有正整数恰好一次。
+
+回顾一下， $\{a\}$ 的一个子序列是从 $\{a\}$ 中若干个元素（不一定连续）按取出顺序不改变相对位置形成的序列。
+
+对于 $\{a\}$ 的一个子序列 $\{b\}$，如果 $\{b\}$ 中的元素单调递增，就称 $\{b\}$ 是 $\{a\}$ 的一个**上升子序列**。
+
+对于 $\{a\}$ 的一个 $\{c\}$上升子序列 ，如果找不到比 $\{c\}$ 元素个数更多的上升子序列了，就称 $\{c\}$ 是 $\{a\}$ 的一个**最长上升子序列**。显然，$\{a\}$ 可以有多个最长上升子序列。
+
+请你对每个 $i∈[1,n]$ ，求出有多少个不同的 $\{a\}$ 的最长上升子序列包含 $a_i$。
+
+> 输入描述
+
+- 第一行一个正整数 $n$。
+- 第二行 $n$ 个正整数，以空格分隔，表示 $a_i$。
+- 保证 $\{a\}$ 是一个 $1～n$ 的排列。
+- $1≤n≤2*10^5$
+
+> 输出描述
+
+- 输出 $n$ 行，每一行一个非负整数，第 $i$ 行的输出表示包含 $a_i$ 的最长上升子序列个数。
+- 因为答案可能很大，所以你只需要输出答案对 $998244352$ 取模的结果。
+
+> 输入
+
+```
+5
+3 1 4 2 5
+```
+
+> 输出
+
+```
+1
+2
+2
+1
+3
+```
+
+> 解释
+
+对于输入的排列，其最长上升子序列长度为 ，所有不同的最长上升子序列如下：
+
+- $1,2,5$
+- $1,4,5$
+- $3,4,5$
+
+以 $a_4=2$ 为例，包含了 $a_4=2$ 的最长上升子序列有 1 个，故答案为 1。 包含了 $a_2=1$ 的最长上升子序列有 2 个，故答案为 2。
+
+> 代码 1：涉及最长上升子序列（LIS）长度与计数的组合、前向/后向 DP、线段树（或树状数组）维护 `<最长长度, 计数>` 的区间合并规则（长度优先、同长计数相加）
+
+这个问题要求我们求出每个元素 $a_i$ 在所有最长上升子序列中出现的次数。题目核心是通过**动态规划与线段树结合**来解决，具体思路如下：
+
+1. 计算正向 DP（从左到右）
+    - 使用 Fenwick 树来高效计算以每个位置结尾的 LIS 长度和数量。
+    - `dp[i]`：以 `a[i]` 结尾的 LIS 长度。
+    - `cnt[i]`：以 `a[i]` 结尾且长度为 `dp[i]` 的 LIS 数量。
+2. 计算反向 DP（从右到左）
+    - 将数组反转并映射值（`a[i] = n - a[i] + 1`），以便计算从右向左的 LIS（实际上是最长下降子序列的逆）。
+    - `dp_rev[i]`：从 `a[i]` 开始（到末尾）的最长下降子序列的长度（实际上是从右向左的 LIS）。
+    - `cnt_rev[i]`：相应的数量。
+3. 判断每个元素是否在 LIS 中
+    - 整个序列的 LIS 长度为 L。
+    - 对于元素 `a[i]`，如果 `dp[i] + dp_rev[i] - 1 == L`，则它出现在某个 LIS 中。
+    - 此时，包含 `a[i]` 的 LIS 数量为 `cnt[i] \* cnt_rev[i] % MOD`。
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+using ll = long long;
+const int MOD = 998244353;
+const int N = 200005;
+
+int n;
+int a[N];
+int dp[N], dp_rev[N];
+ll cnt[N], cnt_rev[N];
+
+struct Fenw {
+    int len;
+    vector<int> max_val;
+    vector<ll> cnt_val;
+    
+    Fenw(int n) : len(n), max_val(n + 1, 0), cnt_val(n + 1, 0) {}
+    
+    void update(int i, int val, ll c) {
+        for (; i <= len; i += i & -i) {
+            if (val > max_val[i]) {
+                max_val[i] = val;
+                cnt_val[i] = c;
+            } else if (val == max_val[i]) {
+                cnt_val[i] = (cnt_val[i] + c) % MOD;
+            }
+        }
+    }
+    
+    pair<int, ll> query(int i) {
+        int res_val = 0;
+        ll res_cnt = 0;
+        for (; i > 0; i -= i & -i) {
+            if (max_val[i] > res_val) {
+                res_val = max_val[i];
+                res_cnt = cnt_val[i];
+            } else if (max_val[i] == res_val) {
+                res_cnt = (res_cnt + cnt_val[i]) % MOD;
+            }
+        }
+        return {res_val, res_cnt};
+    }
+};
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(0);
+    cin >> n;
+    for (int i = 1; i <= n; i++) cin >> a[i];
+    
+    Fenw fenw(n);
+    for (int i = 1; i <= n; i++) {
+        auto [val, c] = fenw.query(a[i] - 1);
+        dp[i] = val + 1;
+        cnt[i] = max(1LL, c);
+        fenw.update(a[i], dp[i], cnt[i]);
+    }
+    
+    int LIS = 0;
+    for (int i = 1; i <= n; i++) LIS = max(LIS, dp[i]);
+    
+    reverse(a + 1, a + n + 1);
+    for (int i = 1; i <= n; i++) a[i] = n - a[i] + 1;
+    
+    Fenw fenw_rev(n);
+    for (int i = 1; i <= n; i++) {
+        auto [val, c] = fenw_rev.query(a[i] - 1);
+        dp_rev[i] = val + 1;
+        cnt_rev[i] = max(1LL, c);
+        fenw_rev.update(a[i], dp_rev[i], cnt_rev[i]);
+    }
+    
+    reverse(dp_rev + 1, dp_rev + n + 1);
+    reverse(cnt_rev + 1, cnt_rev + n + 1);
+    
+    vector<ll> ans(n + 1, 0);
+    for (int i = 1; i <= n; i++) {
+        if (dp[i] + dp_rev[i] - 1 == LIS) {
+            ans[i] = cnt[i] * cnt_rev[i] % MOD;
+        }
+    }
+    
+    for (int i = 1; i <= n; i++) {
+        cout << ans[i] << "\n";
+    }
+    
+    return 0;
+}
+```
+

@@ -1,0 +1,469 @@
+---
+title: 从一次 double free 深入理解 shared_ptr 的原理与最佳实践
+description: 从实际开发中遇到的 double free 问题出发，系统剖析智能指针 shared_ptr 的工作原理与 shared_ptr 的六大使用陷阱，最后提供 shared_ptr 非线程安全版本和基于原子操作的线程安全实现。
+publishDate: 2025-08-02
+tags: [cpp]
+language: Chinese
+comment: true
+draft: false
+---
+
+在使用 C++ 开发过程中，最容易也是最麻烦的问题便是内存泄漏。相较于 Java、Python 或者 Go 语言都拥有垃圾回收机制，在对象没有引用时就会被系统自动回收而且基本上没有指针的概念，但是 C++ 则要求程序员自己管理内存，这一方面让程序员有更大的自由度但是也会很大影响程序员的开发效率。因此 C++11 标准中新推出了 `shared_ptr`、`unique_ptr` 和 `weak_ptr` 三个智能指针来帮助管理内存。
+
+智能指针就是一个类，当超出了类的作用域时，类会自动调用析构函数，析构函数会自动释放资源，所以智能指针的作用原理就是在函数结束时自动释放内存空间，不需要手动释放。
+
+笔者在排查一个 **double free** 问题时，重新回顾了 `shared_ptr` 的工作原理，以及列出一些注意事项，本文着重介绍 `shared_ptr`，其他智能指针不过多赘述。
+
+## `shared_ptr` 本质
+
+`shared_ptr` 能够自动记录共享对象的引用次数，并且在引用计数降至 $0$ 时自动删除对象，从而防止内存泄漏。每个 `shared_ptr` 的拷贝都指向相同的内存，在最后一个 `shared_ptr` 析构的时候其指向的内存资源才会被释放。
+
+本质上 `shared_ptr` 是**有两层析构**：
+
+- `shared_ptr` 本身析构会使得指向的共享对象的引用数 $-1$，当共享对象引用数为 $0$ 时，则调用共享对象本身的析构函数
+- 这样就可以理解循环引用了：共享对象引用还是 $1$ 时，未调用共享对象本身的析构函数，其中成员 `shared_ptr` 的析构函数也不会被调用
+
+`shared_ptr` 初始化方式：
+
+1. 构造函数
+2. `std::make_shared()` 辅助函数
+3. `reset()`
+
+```cpp
+std::shared_ptr<int> p(new int(1));
+std::shared_ptr<int> p2 = p;
+std::shared_ptr<A> ap = std::make_shared<A>();
+
+// 对于一个未初始化的智能指针，可以通过调用 reset 方法初始化
+std::shared_ptr<int> ptr;
+ptr.reset(new int(1));
+```
+
+> 不能将一个原始指针直接赋值给一个智能指针，如：`std::shared_ptr<int> p = new int(1)`。
+
+对于一个未初始化的智能指针，可以通过调用 `reset` 方法初始化，当智能指针中有值的时候，调用 `reset` 方法会使引用计数减 $1$。当需要获取原指针的时候可以通过 `get` 方法返回原始指针：
+
+```cpp
+std::shared_ptr<int> p(new int(1));
+int *ptr = p.get();
+```
+
+智能指针初始化时也可以指定删除器，当其引用计数为 $0$ 时将自动调用删除器来释放对象，删除器可以是一个函数对象。
+
+比如**当使用 `shared_ptr` 管理动态数组时，需要指定删除器，因为 `shared_ptr` 默认删除器不支持数组对象**：
+
+```cpp
+// lambda 表达式作为删除器
+std::shared_ptr<int> p(new int[10], [](int *p) { delete []p; })
+```
+
+## `shared_ptr` 注意事项
+
+关于 `shared_ptr` 的注意事项：
+
+- **不要用一个裸指针初始化多个 `shared_ptr`**，会出现 ***double_free*** 导致程序崩溃
+- 通过 `shared_from_this()` 返回 this 指针，不要把 this 指针作为 `shared_ptr` 返回出来，因为 `this` 指针本质就是裸指针，通过 this 返回可能会导致重复析构，**不能把 this 指针交给智能指针管理**。
+
+- 尽量使用 `std::make_shared<T>()`，少用 `new`
+- **不要 `delete` `get()` 返回的裸指针**
+- **不是 `new` 出来的空间要自定义删除器**
+- **要避免循环引用**，循环引用导致内存永远不会被释放，造成内存泄漏（不在赘述）
+
+### 1. 不要用一个裸指针初始化多个 `shared_ptr`（会导致 double free）
+
+问题场景：
+
+```cpp
+int* raw_ptr = new int(42);
+std::shared_ptr<int> sp1(raw_ptr);
+std::shared_ptr<int> sp2(raw_ptr);  // 危险！
+```
+
+- 两个独立的 `shared_ptr` 会**各自维护**一个引用计数控制块（相互独立）
+- 当 `sp1` 和 `sp2` 销毁时都会尝试释放 `raw_ptr`，导致 **双重释放**（double free）
+- 结果通常是程序崩溃或未定义行为
+
+正确做法：
+
+```cpp
+// 方法1：直接使用 make_shared
+// make_shared 一次性分配内存，包含控制块（引用计数、弱引用计数等）；对象存储空间（存储实际值 42）
+auto sp1 = std::make_shared<int>(42);
+auto sp2 = sp1;  // 只是复制指针并增加引用计数，两个 shared_ptr 指向同一个控制块，共享所有权
+
+// 方法2：如果必须从裸指针创建，确保只创建一次 shared_ptr
+int* raw_ptr = new int(42);
+std::shared_ptr<int> sp1(raw_ptr);
+std::shared_ptr<int> sp2 = sp1;  // 复制的是控制块指针，不是重新创建控制块，共享同一个控制块
+```
+
+### 2. 正确使用 `shared_from_this()` 而不是直接返回 `this` 指针
+
+问题场景：
+
+```cpp
+class BadExample {
+public:
+    std::shared_ptr<BadExample> get_this() {
+        return std::shared_ptr<BadExample>(this);  // 危险！
+    }
+};
+
+auto obj = std::make_shared<BadExample>();
+auto another_ref = obj->get_this();  // 创建了独立的控制块
+```
+
+- 这会创建两个独立的 `shared_ptr` 控制块
+- 当两个 `shared_ptr` 销毁时都会尝试析构同一个对象
+
+正确做法：
+
+```cpp
+class GoodExample : public std::enable_shared_from_this<GoodExample> {
+public:
+    std::shared_ptr<GoodExample> get_this() {
+        return shared_from_this();  // 安全
+    }
+};
+
+auto obj = std::make_shared<GoodExample>();
+auto another_ref = obj->get_this();  // 共享同一个控制块
+```
+
+### 3. 优先使用 `std::make_shared<T>()` 而不是 `new`
+
+问题场景：
+
+```cpp
+// 不推荐
+std::shared_ptr<MyClass> sp(new MyClass(arg1, arg2));
+
+// 推荐
+auto sp = std::make_shared<MyClass>(arg1, arg2);
+```
+
+优势：
+
+1. 性能更好：单次内存分配（对象 + 控制块）
+2. 异常安全：不会在 `new` 和 `shared_ptr` 构造之间发生泄漏
+3. 代码更简洁：不需要重复类型名称
+4. 缓存友好：对象和控制块内存相邻
+
+例外情况：
+
+- 需要自定义删除器时
+- 需要指定特殊的内存分配方式时
+
+### 4. 不要 `delete` `get()` 返回的裸指针
+
+问题场景：
+
+```cpp
+auto sp = std::make_shared<int>(42);
+int* raw_ptr = sp.get();
+delete raw_ptr;  // 灾难性错误！
+
+// 当 sp 超出作用域时，会再次尝试删除已删除的内存
+```
+
+- `shared_ptr` **仍然拥有内存所有权**
+- 手动 `delete` 会导致：
+    - double free
+    - 控制块状态不一致
+    - 未定义行为（通常崩溃）
+
+正确做法：
+
+```cpp
+auto sp = std::make_shared<int>(42);
+int* raw_ptr = sp.get();
+// 仅使用 raw_ptr 进行读取/写入操作，绝不手动删除它
+```
+
+### 5. 非 `new` 分配的内存需要自定义删除器
+
+问题场景：
+
+```cpp
+// 从 malloc 分配的内存
+void* mem = malloc(1024);
+std::shared_ptr<void> sp(mem);  // 错误！会用 delete 而不是 free
+
+// 文件指针
+FILE* fp = fopen("file.txt", "r");
+std::shared_ptr<FILE> sp(fp);  // 错误！会用 delete 而不是 fclose
+```
+
+正确做法：
+
+```cpp
+// 使用自定义删除器（lambda 表达式作为删除器）
+void* mem = malloc(1024);
+std::shared_ptr<void> sp(mem, free);  // 使用 free 作为删除器
+
+FILE* fp = fopen("file.txt", "r");
+std::shared_ptr<FILE> sp(fp, [](FILE* f) { fclose(f); });
+
+// 对于数组
+int* arr = new int[10];
+std::shared_ptr<int> sp(arr, [](int* p) { delete[] p; });
+```
+
+常见删除器场景：
+
+1. C 风格内存分配（`malloc/calloc/realloc`）→ 使用 `free`
+2. 文件操作（`fopen`）→ 使用 `fclose`
+3. 系统资源（套接字、句柄等）→ 使用对应的释放函数
+4. 数组 → 使用 `delete[]`
+
+### 6. 避免循环引用导致的内存泄露
+
+#### 问题场景 1
+
+```cpp
+class A;
+class B;
+
+class A {
+public:
+    std::shared_ptr<B> b;
+};
+
+class B {
+public:
+    std::shared_ptr<A> a;
+};
+
+int main() {
+    std::shared_ptr<A> ap = std::make_shared<A>();
+    std::shared_ptr<B> bp = std::make_shared<B>();
+    ap->b = bp;
+    bp->a = ap;
+    // 此时，a 和 b 相互持有对方的 shared_ptr，形成循环引用
+    // 程序结束时，a 和 b 的引用计数都不会降为零，导致内存泄漏
+    return 0;
+}
+```
+
+#### 问题场景 2
+
+```cpp
+class Node {
+public:
+    std::shared_ptr<Node> next;
+    std::shared_ptr<Node> prev;  // 双向链表导致循环引用
+    ~Node() { std::cout << "Node destroyed\n"; }
+};
+
+auto node1 = std::make_shared<Node>();
+auto node2 = std::make_shared<Node>();
+node1->next = node2;
+node2->prev = node1;  // 循环引用形成！
+```
+
+- 当 `node1` 和 `node2` 离开作用域时：
+    - `node1` 的引用计数从 1→0？不，因为 `node2->prev` 还持有引用（实际从 2→1）
+    - `node2` 的引用计数同样从 2→1
+- 结果：**两者引用计数永远不为 0**，内存永远不会释放
+
+```
+node1 [refcount=2] --> Node1对象
+  ↑next               ↓prev
+Node2对象 <-- [refcount=2] node2
+```
+
+解决方案：`weak_ptr`
+
+```cpp
+class SafeNode {
+public:
+    std::shared_ptr<SafeNode> next;
+    std::weak_ptr<SafeNode> prev;  // 使用weak_ptr
+    
+    ~SafeNode() { std::cout << "SafeNode destroyed\n"; }
+};
+
+auto node1 = std::make_shared<SafeNode>();
+auto node2 = std::make_shared<SafeNode>();
+node1->next = node2;
+node2->prev = node1;  // weak_ptr不会增加引用计数
+```
+
+#### 何时会出现循环引用？
+
+- 双向链表、树结构等复杂数据结构
+- 对象相互持有对方的 `shared_ptr`
+- 父子对象互相强引用
+- 观察者模式中主体和观察者互相持有
+
+## 手撕 `shared_ptr`｜面试高频场景题
+
+### 1. 非线程安全的简单实现
+
+```cpp
+#include <memory>
+
+template<typename T>
+class smartPtr {
+private:
+    T *_ptr;
+    size_t* _count;
+
+public:
+    smartPtr(T *ptr = nullptr):_ptr(ptr) {
+        if (_ptr) {
+            _count = new size_t(1);
+        } else {
+            _count = new size_t(0);
+        }
+    }
+
+    smartPtr(const smartPtr &ptr) {
+        if (this != &ptr) {
+            this->_ptr = ptr._ptr;
+            this->_count = ptr._count;
+            ++(*this->_count)   ;
+        }
+    }
+
+    smartPtr& operator=(const smartPtr &ptr) {
+        if (this->_ptr == ptr._ptr)
+            return *this;
+
+        if (this->_ptr) {
+            --(*this->_count);
+            if (this->_count == 0) {
+                delete this->_ptr;
+                delete this->_count;
+            }
+        }
+
+        this->_ptr = ptr._ptr;
+        this->_count = ptr._count;
+        ++(*this->_count);
+
+        return *this;
+    }
+
+    ~smartPtr() {
+        --(*this->_count);
+        if (0 == *this->_count) {
+            delete this->_ptr;
+            delete this->_count;
+        }
+    }
+
+    size_t use_count() {
+        return *this->_count;
+    }
+
+    T& operator*() {
+        assert(this->_ptr == nullptr);
+        return *(this->_ptr);
+    }
+
+    T* operator->() {
+        assert(this->_ptr == nullptr);
+        return this->_ptr;
+    }
+};
+```
+
+### 2. 基于原子操作的线程安全实现
+
+![Screenshot 2025-08-02 at 18.49.37](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS@master/uPic/20250802-5imE2S.png)
+
+```cpp
+#pragma once
+
+#include <atomic>  // 引入原子操作
+
+template <typename T>
+class shared_ptr {
+private:
+  T* ptr;                               // 指向管理的对象
+  std::atomic<std::size_t>* ref_count;  // 原子引用计数
+
+  // 释放资源
+  void release() {
+    // P.S. 这里使用 std::memory_order_acq_rel 内存序，保证释放资源的同步
+    if (ref_count && ref_count->fetch_sub(1, std::memory_order_acq_rel) == 1) {
+      delete ptr;
+      delete ref_count;
+    }
+  }
+
+public:
+  // 默认构造函数
+  shared_ptr() : ptr(nullptr), ref_count(nullptr) {}
+
+  // 构造函数
+  // P.S. 这里使用 explicit 关键字，防止隐式类型转换
+  // shared_ptr<int> ptr1 = new int(10);  不允许出现
+  explicit shared_ptr(T* p) : ptr(p), ref_count(p ? new std::atomic<std::size_t>(1) : nullptr) {}
+
+  // 析构函数
+  ~shared_ptr() { release(); }
+
+  // 拷贝构造函数
+  shared_ptr(const shared_ptr<T>& other) : ptr(other.ptr), ref_count(other.ref_count) {
+    if (ref_count) {
+      ref_count->fetch_add(1, std::memory_order_relaxed);  // 引用计数增加，不需要强内存序
+    }
+  }
+
+  // 拷贝赋值运算符
+  shared_ptr<T>& operator=(const shared_ptr<T>& other) {
+    if (this != &other) {
+      release();  // 释放当前资源
+      ptr = other.ptr;
+      ref_count = other.ref_count;
+      if (ref_count) {
+        ref_count->fetch_add(1, std::memory_order_relaxed);  // 引用计数增加
+      }
+    }
+    return *this;
+  }
+
+  // 移动构造函数
+  // P.S. noexcept 关键字表示该函数不会抛出异常。
+  // 标准库中的某些操作（如 std::swap）要求移动操作是 noexcept 的，以确保异常安全。
+  // noexcept 可以帮助编译器生成更高效的代码，因为它不需要为异常处理生成额外的代码。
+  shared_ptr(shared_ptr<T>&& other) noexcept : ptr(other.ptr), ref_count(other.ref_count) {
+    other.ptr = nullptr;
+    other.ref_count = nullptr;
+  }
+
+  // 移动赋值运算符
+  shared_ptr<T>& operator=(shared_ptr<T>&& other) noexcept {
+    if (this != &other) {
+      release();  // 释放当前资源
+      ptr = other.ptr;
+      ref_count = other.ref_count;
+      other.ptr = nullptr;
+      other.ref_count = nullptr;
+    }
+    return *this;
+  }
+
+  // 解引用运算符
+  // P.S. const 关键字表示该函数不会修改对象的状态。
+  T& operator*() const { return *ptr; }
+
+  // 箭头运算符
+  T* operator->() const { return ptr; }
+
+  // 获取引用计数
+  std::size_t use_count() const { return ref_count ? ref_count->load(std::memory_order_acquire) : 0; }
+
+  // 获取原始指针
+  T* get() const { return ptr; }
+
+  // 重置指针
+  void reset(T* p = nullptr) {
+    release();
+    ptr = p;
+    ref_count = p ? new std::atomic<std::size_t>(1) : nullptr;
+  }
+};
+```

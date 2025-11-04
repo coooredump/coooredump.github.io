@@ -1,0 +1,125 @@
+---
+title: 并查集
+description: 并查集是一种用于管理元素所属集合的数据结构，实现为一个森林，其中每棵树表示一个集合，树中的节点表示对应集合中的元素。
+publishDate: 2025-04-28
+tags: [leetcode]
+heroImage: { src: ../_img/202501222250241.jpeg }
+language: Chinese
+comment: true
+draft: false
+---
+
+## ✅ 并查集
+
+![img](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202504272343302.svg)
+
+相关例题：
+
+- [1971. 寻找图中是否存在路径](https://leetcode.cn/problems/find-if-path-exists-in-graph/)
+- [684. 冗余连接](https://leetcode.cn/problems/redundant-connection/)
+- [685. 冗余连接 II](https://leetcode.cn/problems/redundant-connection-ii/)
+
+并查集是一种用于管理元素所属集合的数据结构，实现为一个森林，其中每棵树表示一个集合，树中的节点表示对应集合中的元素。
+
+顾名思义，并查集支持两种操作：
+
+- 合并（Union）：合并两个元素所属集合（合并对应的树）
+- 查询（Find）：查询某个元素所属集合（查询对应的树的根节点），这可以用于判断两个元素是否属于同一集合
+
+并查集在经过修改后可以支持单个元素的删除、移动；使用动态开点线段树还可以实现可持久化并查集。
+
+### 模板代码
+
+```cpp
+vector<int> p(n);
+
+iota(p.begin(), p.end(), 0);
+
+vector<int> size(n, 1);
+
+int find(int x) {
+    if (p[x] != x) {
+        // 路径压缩
+        p[x] = find(p[x]);
+    }
+    return p[x];
+}
+
+void unite(int a, int b) {
+    int pa = find(a), pb = find(b);
+    if (pa == pb) return;
+    p[pa] = pb;
+    size[pb] += size[pa];
+}
+```
+
+## [684. 冗余连接](https://leetcode.cn/problems/redundant-connection/)
+
+树可以看成是一个连通且 **无环** 的 **无向** 图。
+
+给定往一棵 `n` 个节点 (节点值 `1～n`) 的树中添加一条边后的图。添加的边的两个顶点包含在 `1` 到 `n` 中间，且这条附加的边不属于树中已存在的边。图的信息记录于长度为 `n` 的二维数组 `edges` ，`edges[i] = [ai, bi]` 表示图中在 `ai` 和 `bi` 之间存在一条边。
+
+请找出一条可以删去的边，删除后可使得剩余部分是一个有着 `n` 个节点的树。如果有多个答案，则返回数组 `edges` 中最后出现的那个。
+
+**示例 1：**
+
+![img](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202504272343711.png)
+
+```cpp
+输入: edges = [[1,2], [1,3], [2,3]]
+输出: [2,3]
+```
+
+**示例 2：**
+
+![img](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202504272343560.png)
+
+```cpp
+输入: edges = [[1,2], [2,3], [3,4], [1,4], [1,5]]
+输出: [1,4]
+```
+
+### 1️⃣ 并查集
+
+```cpp
+class Solution {
+public:
+    vector<int> p;
+
+    void init(int n) {
+        p.resize(n + 1);
+        iota(p.begin(), p.end(), 0);
+    }
+
+    int find(int x) {
+        if (x != p[x])
+            p[x] = find(p[x]); // 路经压缩
+        return p[x];
+    }
+
+    bool isSame(int u, int v) {
+        int pu = find(u);
+        int pv = find(v);
+        return pu == pv;
+    }
+
+    void join(int u, int v) {
+        int pu = find(u);
+        int pv = find(v);
+        p[pu] = pv;
+    }
+
+    vector<int> findRedundantConnection(vector<vector<int>>& edges) {
+        init(edges.size());
+        for (auto e : edges) {
+            int u = e[0], v = e[1];
+            if (isSame(u, v)) {
+                return e;
+            } else {
+                join(u, v);
+            }
+        }
+        return {};
+    }
+};
+```

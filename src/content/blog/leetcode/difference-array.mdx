@@ -1,0 +1,132 @@
+---
+title: 差分数组
+description: Difference Array
+publishDate: 2025-04-28
+tags: [leetcode]
+heroImage: { src: ../_img/202501222250241.jpeg }
+language: Chinese
+comment: true
+draft: false
+---
+
+## ✅ 差分数组
+
+相关例题：
+
+- [2848. 与车相交的点](https://leetcode.cn/problems/points-that-intersect-with-cars/)
+- [1094. 拼车](https://leetcode.cn/problems/car-pooling/)
+- [1109. 航班预订统计](https://leetcode.cn/problems/corporate-flight-bookings/)
+- [2406. 将区间分为最少组数](https://leetcode.cn/problems/divide-intervals-into-minimum-number-of-groups/)
+- [2381. 字母移位 II](https://leetcode.cn/problems/shifting-letters-ii/)
+- [2772. 使数组中的所有元素都等于零](https://leetcode.cn/problems/apply-operations-to-make-all-array-elements-equal-to-zero/)
+- [2528. 最大化城市的最小电量](https://leetcode.cn/problems/maximize-the-minimum-powered-city/)
+
+**难点**：如何快速地「把区间内的数都加一」呢？
+
+![LC2132-c.png](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202504280001866.png)
+
+## [2848. 与车相交的点](https://leetcode.cn/problems/points-that-intersect-with-cars/)（一维差分数组）
+
+给你一个下标从 **0** 开始的二维整数数组 `nums` 表示汽车停放在数轴上的坐标。对于任意下标 `i`，`nums[i] = [starti, endi]` ，其中 `starti` 是第 `i` 辆车的起点，`endi` 是第 `i` 辆车的终点。
+
+返回数轴上被车 **任意部分** 覆盖的整数点的数目。
+
+**示例 1：**
+
+```cpp
+输入：nums = [[3,6],[1,5],[4,7]]
+输出：7
+解释：从 1 到 7 的所有点都至少与一辆车相交，因此答案为 7 。
+```
+
+**示例 2：**
+
+```cpp
+输入：nums = [[1,3],[5,8]]
+输出：7
+解释：1、2、3、5、6、7、8 共计 7 个点满足至少与一辆车相交，因此答案为 7 。
+```
+
+### 1️⃣ 差分数组
+
+核心思路：计算每个点被覆盖了多少次。统计覆盖次数大于 0 的点，即为答案。
+
+假设一开始有一个全为 0 的数组 a，用来保存每个点被覆盖了多少次。
+
+对于示例 1，我们可以把 a 中下标在 [3,6] 的元素都加一，下标在 [1,5] 的元素都加一，下标在 [4,7] 的元素都加一。
+
+然后，统计 `a[i] > 0` 的个数，即为答案。
+
+**如何快速地「把区间内的数都加一」呢**？
+
+- 这可以用差分数组实现。
+
+```cpp
+class Solution {
+public:
+    int numberOfPoints(vector<vector<int>>& nums) {
+        int max_end = ranges::max(nums, {}, [](const auto& a) { return a[1]; })[1];
+        vector<int> diff(max_end + 2);
+		// 首尾两点做标记
+        for (auto& interval : nums) {
+            diff[interval[0]]++;
+            diff[interval[1] + 1]--;
+        }
+        // s += d
+        int s = 0, ans = 0;
+        for (int d : diff) {
+            s += d;
+            ans += s > 0;
+        }
+        return ans;
+    }
+};
+```
+
+## [1094. 拼车](https://leetcode.cn/problems/car-pooling/)
+
+车上最初有 `capacity` 个空座位。车 **只能** 向一个方向行驶（也就是说，**不允许掉头或改变方向**）
+
+给定整数 `capacity` 和一个数组 `trips` ,  `trip[i] = [numPassengersi, fromi, toi]` 表示第 `i` 次旅行有 `numPassengersi` 乘客，接他们和放他们的位置分别是 `fromi` 和 `toi` 。这些位置是从汽车的初始位置向东的公里数。
+
+当且仅当你可以在所有给定的行程中接送所有乘客时，返回 `true`，否则请返回 `false`。
+
+**示例 1：**
+
+```cpp
+输入：trips = [[2,1,5],[3,3,7]], capacity = 4
+输出：false
+```
+
+**示例 2：**
+
+```cpp
+输入：trips = [[2,1,5],[3,3,7]], capacity = 5
+输出：true
+```
+
+### 1️⃣ 差分数组
+
+```cpp
+class Solution {
+public:
+    bool carPooling(vector<vector<int>>& trips, int capacity) {
+        // ranges::max(list, comp, proj)
+        int max_end = ranges::max(trips, {}, [](const auto& a) { return a[2]; })[2];
+        vector<int> diff(max_end + 1);
+        for (auto& trip : trips) {
+            int num = trip[0], from = trip[1], to = trip[2];
+            diff[from] += num;
+            // 不一定要 +1，根据题目情况而变
+            diff[to] -= num;
+        }
+        int s = 0;
+        for (int d : diff) {
+            s += d;
+            if (s > capacity)
+                return false;
+        }
+        return true;
+    }
+};
+```

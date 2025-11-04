@@ -1,0 +1,169 @@
+---
+title: 快手一面｜合并 K 个升序链表
+description: 快手一面，面试官说来一题简单题，最后还问了时间复杂度：假设 k 个链表，共 n 个节点，时间复杂度是多少
+publishDate: 2025-04-28
+tags: [leetcode]
+heroImage: { src: ../_img/202501222250241.jpeg }
+language: Chinese
+comment: true
+draft: false
+---
+
+## 快手一面 & 时间复杂度
+
+**快手一面**，面试官说来一题简单题😊，最后还问了时间复杂度：假设 k 个链表，共 n 个节点，那时间复杂度为 $O(k·logk+n·logk)$ 即 $O(n·logk)$。
+
+## [23. 合并 K 个升序链表](https://leetcode.cn/problems/merge-k-sorted-lists/)
+
+给你一个链表数组，每个链表都已经按升序排列。
+
+请你将所有链表合并到一个升序链表中，返回合并后的链表。
+
+**示例 1：**
+
+```cpp
+输入：lists = [[1,4,5],[1,3,4],[2,6]]
+输出：[1,1,2,3,4,4,5,6]
+解释：链表数组如下：
+[
+  1->4->5,
+  1->3->4,
+  2->6
+]
+将它们合并到一个有序链表中得到。
+1->1->2->3->4->4->5->6
+```
+
+### 1️⃣ 最小堆
+
+时间复杂度分析：假设 $k$ 个链表, 共 $n$ 个节点, 最小堆单次操作 $O(log k)$, 初始化堆需要 $O(k·logk)$, 那时间复杂度为 $O(k·logk + n·logk)$，即 $O(n·logk)$。
+
+```cpp
+/**
+ * Definition for singly-linked list.
+ * struct ListNode {
+ *     int val;
+ *     ListNode *next;
+ *     ListNode() : val(0), next(nullptr) {}
+ *     ListNode(int x) : val(x), next(nullptr) {}
+ *     ListNode(int x, ListNode *next) : val(x), next(next) {}
+ * };
+ */
+class Solution {
+public:
+    ListNode* mergeKLists(vector<ListNode*>& lists) {
+        auto cmp = [](const ListNode* a, const ListNode* b) {
+            return a->val > b->val;
+        };
+        priority_queue<ListNode*, vector<ListNode*>, decltype(cmp)> pq;
+        for (auto& head : lists) {
+            if (head) {
+                pq.push(head);
+            }
+        }
+        ListNode dummy{};
+        ListNode* head = &dummy;
+        while (!pq.empty()) {
+            ListNode* node = pq.top();
+            pq.pop();
+            head->next = node;
+            head = head->next;
+            if (node->next)
+                pq.push(node->next);
+        }
+        return dummy.next;
+    }
+};
+```
+
+### 2️⃣ 分治法
+
+前置题目：[21. 合并两个有序链表](https://leetcode.cn/problems/merge-two-sorted-lists/)
+
+```cpp
+/**
+ * Definition for singly-linked list.
+ * struct ListNode {
+ *     int val;
+ *     ListNode *next;
+ *     ListNode() : val(0), next(nullptr) {}
+ *     ListNode(int x) : val(x), next(nullptr) {}
+ *     ListNode(int x, ListNode *next) : val(x), next(next) {}
+ * };
+ */
+class Solution {
+public:
+    ListNode* mergeTwoLists(ListNode* list1, ListNode* list2) {
+        ListNode dummy{};
+        ListNode* cur = &dummy;
+        while (list1 && list2) {
+            if (list1->val < list2->val) {
+                cur->next = list1;
+                list1 = list1->next;
+            } else {
+                cur->next = list2;
+                list2 = list2->next;
+            }
+            cur = cur->next;
+        }
+        cur->next = list1 ? list1 : list2;
+        return dummy.next;
+    }
+
+    ListNode* mergeKLists(vector<ListNode*>& lists, int l, int r) {
+        if (l == r)
+            return lists[l];
+        if (l > r)
+            return nullptr;
+        int m = (l + r) >> 1;
+        auto left = mergeKLists(lists, l, m);
+        auto right = mergeKLists(lists, m + 1, r);
+        return mergeTwoLists(left, right);
+    }
+
+    ListNode* mergeKLists(vector<ListNode*>& lists) {
+        return mergeKLists(lists, 0, lists.size() - 1);
+    }
+};
+```
+
+## 复习「堆排序」
+
+```cpp
+class Solution {
+public:
+    // 向下调整
+    void heapify(vector<int>& nums, int i, int n) {
+        int largest = i;
+        int left = i * 2 + 1;
+        int right = i * 2 + 2;
+        if (left < n && nums[left] > nums[largest])
+            largest = left;
+        if (right < n && nums[right] > nums[largest])
+            largest = right;
+        if (largest != i) {
+            swap(nums[largest], nums[i]);
+            heapify(nums, largest, n);
+        }
+    }
+
+    void heapsort(vector<int>& nums) {
+        int n = nums.size();
+        // i = n / 2 也可, 多判断一次而已
+        // 向上初始化构建, 获取数组最大值
+        for (int i = n / 2 - 1; i >= 0; i--) {
+            heapify(nums, i, n);
+        }
+        // 最大值不断调整到末尾, 并对新元素 nums[0] 向下进行调整
+        for (int i = n - 1; i >= 0; i--) {
+            swap(nums[i], nums[0]);
+            heapify(nums, 0, i);    // 每次都从 0 开始调整
+        }
+    }
+
+    vector<int> sortArray(vector<int>& nums) {
+        heapsort(nums);
+        return nums;
+    }
+};
+```

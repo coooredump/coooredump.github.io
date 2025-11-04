@@ -1,0 +1,630 @@
+---
+title: 2025.08.09 网易雷火笔试题
+description: 网易雷火 20250809 笔试解析
+publishDate: 2025-08-09
+tags: [秋招指南]
+heroImage: { src: ../_img/20250809-r17Do9.png }
+language: Chinese
+comment: true
+draft: false
+---
+
+> 题解链接：https://mp.weixin.qq.com/s/b2qohQxoMJk8Kysswtc7mQ
+>
+> 测评链接：https://niumacode.com/training/143
+
+## 1. 部门旅游
+
+今年小师妹将再次组织大家进行一次精彩的部门旅游。为了确保每位员工能够顺利参与，现有三个不同的旅游团可供选择。每个旅游团的人数限制各不相同，员工可根据自己的喜好选择报名的旅游团。为了公平起见，系统将采用先到先得的原则进行处理。 报名规则如下：
+
+1. 每位员工可以根据喜好报名参加1到3个旅游团。 
+2. 报名时，如果首选的旅游团已满员，系统将自动尝试加入员工的次选旅游团。
+3. 如果员工所选择的所有旅游团均已满员，则该员工无法参加此次旅游。
+
+> 输入描述
+
+- 第一行包含一个整数 N，表示员工的数量（1 ≤ N ≤ 10000）。
+- 第二行包含三个整数，分别表示旅游团 A、B、C 的最大名额（1 ≤ A, B, C ≤ 10000）。
+- 接下来的 N 行，每行包含：
+    - 一个字符串，表示员工的 ID（由字母和数字组成，并且互不相同） ID 长度 ≤ 13。
+    - 一个整数 X（1 ≤ X ≤ 3），表示该员工选择的旅游团数量。
+    - X 个字符（A/B/C），表示员工选择的旅游团的优先级，优先级高的选择在前。
+
+> 输出描述
+
+- 按 A,B,C 三个团的顺序输出三行，每行一个整数，表示这个团最终的人数 a，接下来是 a 个字符串，表示进入这个团的员工 ID， 请按照报名顺序输出。
+
+> 示例 1
+
+输入：
+
+```cpp
+4
+2 1 1
+zhang01 2 A B
+chen01 1 B
+li02 3 B C A
+yang 2 B A
+```
+
+输出：
+
+```cpp
+2 zhang01 yang
+1 chen01
+1 li02
+```
+
+> 示例 2
+
+输入：
+
+```cpp
+4
+2 1 1
+zhang01 2 A B
+chen01 2 A B
+li02 3 A B C
+yang 2 B A
+```
+
+输出：
+
+```cpp
+2 zhang01 chen01
+1 li02
+0
+```
+
+> 代码：模拟
+
+```cpp
+#include <iostream>
+#include <vector>
+#include <string>
+using namespace std;
+
+int main() {
+    int employeeCount;
+    cin >> employeeCount;
+    
+    int maxA, maxB, maxC;
+    cin >> maxA >> maxB >> maxC;
+    
+    vector<string> groupA, groupB, groupC;
+    
+    for (int i = 0; i < employeeCount; ++i) {
+        string employeeID;
+        int choiceCount;
+        cin >> employeeID >> choiceCount;
+        
+        vector<char> choices(choiceCount);
+        for (auto& choice : choices) {
+            cin >> choice;
+        }
+        
+        for (char choice : choices) {
+            if (choice == 'A' && groupA.size() < maxA) {
+                groupA.push_back(employeeID);
+                break;
+            }
+            else if (choice == 'B' && groupB.size() < maxB) {
+                groupB.push_back(employeeID);
+                break;
+            }
+            else if (choice == 'C' && groupC.size() < maxC) {
+                groupC.push_back(employeeID);
+                break;
+            }
+        }
+    }
+    
+    cout << groupA.size();
+    for (const string& id : groupA) {
+        cout << " " << id;
+    }
+    cout << "\n";
+    
+    cout << groupB.size();
+    for (const string& id : groupB) {
+        cout << " " << id;
+    }
+    cout << "\n";
+    
+    cout << groupC.size();
+    for (const string& id : groupC) {
+        cout << " " << id;
+    }
+    cout << "\n";
+    
+    return 0;
+}
+```
+
+## 2. 战力极差的最小值
+
+在《无主星渊》的竞技宇宙中，来自各个星系的顶尖战队齐聚一堂，准备迎战传说中的最终 BOSS。每个星系派出了最精锐的战队，共 n 支战队，每支战队有 m 名成员，每位成员的战力值分别为 $p_1, p_2, ..., p_m$。为了组成最强的终极挑战队，你需要从每支战队中各选 1 名成员（共 n 人），但团队配合至关重要。经过无数次模拟战斗，联盟科学家发现：战力越均衡的团队，越能激发协同共鸣。因此，选拔规则如下：在所有可能的组队方案中，选择战力极差（最大值 - 最小值）最小的方案，确保团队以最平衡的状态迎战 BOSS。
+
+你的任务：计算所有可能的组队方案中，战力极差的最小值。
+
+> 输入描述
+
+- 第一行两个正整数 $n (0 < n ≤ 3000)$、$m (0 < m ≤ 100)$，分别表示队伍数量与每只战队中的成员数量。
+- 之后 $n$ 行，每行输入 $m$ 个数字 $p_i (0 < p_i < 1e9)$，代表战队中成员的战力值。
+
+> 输出描述
+
+- 所有可能的组队方案中，战力极差的最小值
+
+> 示例 1
+
+输入：
+```cpp
+1 1
+1
+```
+
+输出：
+
+```cpp
+0
+```
+
+> 示例 2
+
+输入：
+
+```cpp
+3 4
+10 15 24 26
+0 9 12 20
+5 18 22 30
+```
+
+输出：
+
+```cpp
+4
+```
+
+> 代码：滑动窗口
+
+我们需要从 n 支战队中各选 1 名成员，组成一个 n 人团队。在所有可能的组队方案中，找到战力极差（最大值 - 最小值）最小的方案。
+
+解题思路
+
+1. **暴力法不可行**：直接枚举所有可能的组合（共 $m^n$ 种）显然不现实，因为 n 和 m 可能较大（n ≤ 3000，m ≤ 100）。
+2. **排序 + 滑动窗口**：
+    - 将每支战队的成员战力值排序。
+    - 将所有战队的成员合并到一个列表，并记录每个成员所属的战队。
+    - 对这个合并后的列表按战力值排序。
+    - 使用滑动窗口，找到一个窗口，其中包含所有 n 支战队的至少一个成员，且窗口的极差最小。
+
+```cpp
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <climits>
+#include <unordered_map>
+using namespace std;
+
+int main() {
+    int n, m;
+    cin >> n >> m;
+    vector<vector<int>> teams(n, vector<int>(m));
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < m; ++j) {
+            cin >> teams[i][j];
+        }
+        sort(teams[i].begin(), teams[i].end()); // 每支战队内部排序
+    }
+
+    // 合并所有成员，并记录所属战队
+    vector<pair<int, int>> members; // (value, team_id)
+    for (int i = 0; i < n; ++i) {
+        for (int val : teams[i]) {
+            members.emplace_back(val, i);
+        }
+    }
+    // 按战力值排序
+    sort(members.begin(), members.end());
+
+    int left = 0;
+    unordered_map<int, int> team_count;
+    int min_diff = INT_MAX;
+
+    for (int right = 0; right < members.size(); ++right) {
+        int team = members[right].second;
+        team_count[team]++;
+
+        // 当窗口包含所有战队时，尝试移动left
+        while (team_count.size() == n) {
+            int current_diff = members[right].first - members[left].first;
+            if (current_diff < min_diff) {
+                min_diff = current_diff;
+            }
+            // 移动left
+            int left_team = members[left].second;
+            team_count[left_team]--;
+            if (team_count[left_team] == 0) {
+                team_count.erase(left_team);
+            }
+            left++;
+        }
+    }
+
+    cout << min_diff << endl;
+    return 0;
+}
+```
+
+## 3. 金矿采集
+
+在《无主星渊》的太空战场中，玩家需操控飞船从起点 (S) 出发，在 n×m 的网格中以最短时间采集所有的金矿。飞船每次仅能向上下左右四个方向移动一个网格，金矿可以以任何先后顺序被采集，飞船到达金矿后可以选择立即采集也可以选择路过。一共有 k 个金矿，金矿初始的矿产值为 Xi，当飞船采集到 a(0 ≤ a ≤ k) 个金矿后，每移动一步，所有未被采集的金矿都会减少 a 点矿产值，当金矿的矿产值减少到 1 的时候将不再减小。需要你帮玩家算一下，玩家最多可以采集到金矿的总价值。
+
+网格包含以下元素：
+
+- `#`：不可穿越的障碍物
+- `.`：可自由航行的太空区域
+- `1~5`：表示 $k$ 个金矿的编号
+- `S`：飞船起点
+
+> 输入描述
+
+- 首行：`n m k (1 ≤ n, m ≤ 50, 1≤ k ≤5)`
+- 后续 $n$ 行，每行 $m$ 个字符表示 $n*m$ 的网格的信息
+- 最后一行是 $k$ 个整数，第 $i$ 个数表示编号为 $i$ (1 ≤ i ≤ k) 的金矿的初始矿产值 Xi (1 ≤ Xi ≤ 1000)
+
+> 输出描述
+
+- **玩家最多可以采集到的金矿总矿产值，数据保证所有金矿都可以到达**
+
+> 示例 1
+
+输入：
+
+```cpp
+5 7 3
+S.....3
+##.....
+..##...
+..1....
+2..#...
+10 20 30
+```
+
+输出：
+
+```cpp
+41
+```
+
+> 示例 2
+
+输入：
+
+```cpp
+4 4 1
+....
+.##.
+.##.
+S##1
+100 
+```
+
+输出：
+
+```cpp
+100
+```
+
+> 示例 3
+
+输入：
+
+```cpp
+5 7 3
+S.....3
+##.....
+..##...
+..1....
+2..#...
+40 1 1
+```
+
+输出：
+
+```cpp
+42
+```
+
+> 代码：BFS + 全排列枚举
+
+(1) 数据输入与预处理
+
+- 读取网格地图，记录起点 `S` 和金矿的位置（保存到 `positions` 数组）。
+- 金矿编号为 `1` 到 `goldCount`，起点编号为 `0`。
+
+(2) BFS 计算最短路径
+
+- 对每个金矿（包括起点）运行 BFS，计算到其他所有金矿的最短路径步数：
+    - 使用 `distances[i][j]` 表示从位置 `i` 到位置 `j` 的最短步数。
+    - 通过BFS遍历地图，跳过障碍物和边界。
+
+(3) 全排列搜索最优顺序
+
+- 生成所有金矿的排列顺序（`1` 到 `goldCount`的全排列）。
+- 对每种顺序计算总得分：
+    1. 从起点（`last = 0`）出发。
+    2. 对于第 `k` 个金矿 `order[k]`：
+        - 累加步数惩罚：`minus += stepCount * k`。
+        - 计算当前金矿得分：`max(initialValues[order[k]] - minus, 1)`。
+        - 更新当前位置 `last`。
+    3. 记录所有顺序中的最大得分 `maxTotal`。
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+
+vector<string> grid;
+int rows, cols, goldCount;
+const int INF = 0x3f3f3f3f;
+
+int main() {
+    ios::sync_with_stdio(0);
+    cin.tie(0);
+    
+    cin >> rows >> cols >> goldCount;
+    grid.resize(rows);
+    for (auto& row : grid) {
+        cin >> row;
+    }
+    
+    vector<int> initialValues(goldCount + 1);
+    for (int i = 1; i <= goldCount; ++i) {
+        cin >> initialValues[i];
+    }
+    
+    vector<pair<int, int>> positions(goldCount + 1, {-1, -1});
+    pair<int, int> startPos;
+    
+    for (int i = 0; i < rows; ++i) {
+        for (int j = 0; j < cols; ++j) {
+            if (grid[i][j] == 'S') {
+                startPos = {i, j};
+            }
+            else if (isdigit(grid[i][j])) {
+                int goldId = grid[i][j] - '0';
+                positions[goldId] = {i, j};
+            }
+        }
+    }
+    
+    auto bfs = [](int startX, int startY) {
+        vector<vector<int>> dist(rows, vector<int>(cols, INF));
+        queue<pair<int, int>> q;
+        q.push({startX, startY});
+        dist[startX][startY] = 0;
+        
+        vector<vector<int>> directions = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}};
+        
+        while (!q.empty()) {
+            auto [x, y] = q.front();
+            q.pop();
+            
+            for (auto& dir : directions) {
+                int newX = x + dir[0];
+                int newY = y + dir[1];
+                
+                if (newX < 0 || newX >= rows || newY < 0 || newY >= cols) {
+                    continue;
+                }
+                if (grid[newX][newY] == '#' || dist[newX][newY] != INF) {
+                    continue;
+                }
+                
+                dist[newX][newY] = dist[x][y] + 1;
+                q.push({newX, newY});
+            }
+        }
+        return dist;
+    };
+    
+    positions[0] = startPos;
+    int totalPoints = goldCount + 1;
+    vector<vector<int>> distances(totalPoints, vector<int>(totalPoints));
+    
+    for (int i = 0; i < totalPoints; ++i) {
+        auto dist = bfs(positions[i].first, positions[i].second);
+        for (int j = 0; j < totalPoints; ++j) {
+            distances[i][j] = dist[positions[j].first][positions[j].second];
+        }
+    }
+    
+    vector<int> order(goldCount);
+    iota(order.begin(), order.end(), 1);
+    int maxTotal = 0;
+    
+    do {
+        int minus = 0, total = 0, last = 0;
+        for (int i = 0; i < goldCount; ++i) {
+            int currentGold = order[i];
+            int stepCount = distances[last][currentGold];
+            minus += stepCount * i;
+            total += max(initialValues[currentGold] - minus, 1);
+            last = currentGold;
+        }
+        maxTotal = max(maxTotal, total);
+    } while (next_permutation(order.begin(), order.end()));
+    
+    cout << maxTotal << endl;
+    
+    return 0;
+}
+```
+
+## 4. 篮球游戏
+
+你正在篮球场上与其他玩家玩一场游戏。你需要站在看台边，用推车接住从看台上扔下来的篮球。
+
+篮球上标有不同的积分，你接到后就获得了对应的积分。但是其中有一部分玩家他们会扔其他种类的球，如果你不小心接到了这些球，你就需要停在原地 3 秒。期间你只能等待时间过去，或者正好有球进入车筐中。如果你在停止期间又接到了非篮球的球类，不论之前你的停止时间还剩多少，它都会重新刷新为 3 秒。
+
+所有的球类都会在1  秒的时间里下落 1 格高度，而你也可以在 1s 时间里向左或者向右移动一格，或者不动。当车筐与球重合时，表示你接到了球，你可以在一个位置同时接到多个球。
+
+一开始，你可以选择任意的位置，那么你怎么规划你的移动路线，能够使得接到的球总积分最高呢？
+
+> 输入描述
+
+- 第一行有两个整数 n (1 ≤ n ≤ 100)，m (1 ≤ m ≤ 1000)，n 表示可以接到的球以及人可以站立的横向长度，m 表示扔出的球的总数
+- 接下来 m 行，每行四个整数 $v_i (0 ≤ v_i ≤ 1e5)，x_i (0 ≤ x_i < n)，y_i (0 < y_i ≤ 1000)，t_i (0 < t_i ≤ 1000)$，$v_i$ 表示球的积分，$x_i$ 表示物品的横向坐标，$y_i$ 表示物品的初始高度，$t_i$ 表示物品开始掉落的时间。当接收到 $v_i==0$ 的球时，会使你困在原地 3 秒，如果此时已经处于被困住的状态，则时间会重置为 3 秒
+
+> 输出描述
+
+- 一个整数，表示可以接到的球的最大总积分
+
+> 示例 1
+
+输入：
+
+```cpp
+10 3
+3 5 3 3
+0 3 2 1
+1 0 10 6
+```
+
+输出：
+
+```cpp
+4
+```
+
+> 示例 2
+
+输入：
+
+```cpp
+10 1
+0 3 2 1
+```
+
+输出：
+
+```cpp
+0
+```
+
+> 代码：动态规划
+
+这是一个动态规划问题，我们需要在时间和空间维度上规划接球路线，最大化获得的积分，同时处理"定身"状态的干扰。
+
+时间处理：所有球的下落时间被预处理为 `time_start + height`，即球到达底部的时间。
+
+状态表示：`dp[pos][stun]` 表示在位置 `pos` 且剩余定身时间为 `stun` 时的最大得分
+
+定身状态有 4 种可能：0(无定身),1,2,3
+
+状态转移：
+
+- 无定身时：可以左移、右移或不动
+- 有定身时：只能不动，定身时间减 1
+- 接到非篮球 (v=0) 时：强制将定身时间设为 3
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+
+constexpr int MAX_TIME = 2000;
+constexpr long long NEG_INF = -(1LL << 60);
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+
+    int positions, events;
+    cin >> positions >> events;
+
+    // scores[time][pos]: 当前时刻和位置能获得的分数总和
+    vector<vector<int>> scores(MAX_TIME + 1, vector<int>(positions, 0));
+    // traps[time][pos]: 是否存在非篮球，触发定身
+    vector<vector<bool>> traps(MAX_TIME + 1, vector<bool>(positions, false));
+
+    for (int i = 0; i < events; ++i) {
+        int value, pos, height, time_start;
+        cin >> value >> pos >> height >> time_start;
+        int landing_time = time_start + height;
+        scores[landing_time][pos] += value;
+        if (value == 0) {  // 非篮球触发定身
+            traps[landing_time][pos] = true;
+        }
+    }
+
+    // dp[pos][stun]: 最大得分，stun表示剩余定身秒数（0~3）
+    vector<vector<long long>> dp(positions, vector<long long>(4, NEG_INF));
+    // 初始状态：任何位置未定身，分数为0
+    for (int i = 0; i < positions; ++i) {
+        dp[i][0] = 0;
+    }
+
+    long long answer = 0;
+
+    for (int time = 0; time <= MAX_TIME; ++time) {
+        vector<vector<long long>> next_dp(positions, vector<long long>(4, NEG_INF));
+
+        for (int pos = 0; pos < positions; ++pos) {
+            for (int stun = 0; stun <= 3; ++stun) {
+                long long curr_score = dp[pos][stun];
+                if (curr_score == NEG_INF) continue;
+
+                int new_stun = (stun == 0) ? 0 : stun - 1;
+
+                // 如果没有被定身，可以移动
+                if (stun == 0) {
+                    if (pos > 0) {
+                        next_dp[pos - 1][new_stun] = max(next_dp[pos - 1][new_stun], 
+                                                        curr_score + scores[time][pos - 1]);
+                    }
+                    if (pos + 1 < positions) {
+                        next_dp[pos + 1][new_stun] = max(next_dp[pos + 1][new_stun], 
+                                                        curr_score + scores[time][pos + 1]);
+                    }
+                }
+                // 原地等待
+                next_dp[pos][new_stun] = max(next_dp[pos][new_stun], 
+                                            curr_score + scores[time][pos]);
+            }
+        }
+
+        // 处理定身刷新逻辑
+        for (int pos = 0; pos < positions; ++pos) {
+            // 更新答案
+            for (int stun = 0; stun <= 3; ++stun) {
+                if (next_dp[pos][stun] > answer) {
+                    answer = next_dp[pos][stun];
+                }
+            }
+
+            if (traps[time][pos]) {
+                // 非篮球出现，所有未满3秒定身状态强制变成3秒定身
+                long long max_stun3 = next_dp[pos][3];
+                for (int stun = 0; stun < 3; ++stun) {
+                    if (next_dp[pos][stun] != NEG_INF) {
+                        max_stun3 = max(max_stun3, next_dp[pos][stun]);
+                        next_dp[pos][stun] = NEG_INF;
+                    }
+                }
+                next_dp[pos][3] = max_stun3;
+                if (next_dp[pos][3] > answer) {
+                    answer = next_dp[pos][3];
+                }
+            }
+        }
+
+        dp = move(next_dp);
+    }
+
+    cout << answer << "\n";
+
+    return 0;
+}
+```

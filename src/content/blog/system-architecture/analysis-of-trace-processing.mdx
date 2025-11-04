@@ -1,0 +1,189 @@
+---
+title: 浅析 trace 的处理
+description: trace 这个词有着很多的含义，在英文维基中计算机科学分类中就有 5 个代指，而实验室平常所说到的 trace 特指 I/O trace
+publishDate: 2024-12-08
+tags: [系统与体系结构]
+heroImage: { src: ../_img/202501222321048.png }
+language: Chinese
+comment: true
+draft: false
+---
+
+> 由于作者见识有限，本文仅对 `WebSearch2.spc` 这一 trace 进行讲解分析。
+
+## What is trace
+
+trace 这个词有着很多的含义，在英文维基中计算机科学分类中就有 5 个代指。而实验室平常所说到的 trace 应该是特指 I/O trace。说来惭愧，一直在网上找不到实验室用的 I/O trace 的权威定义，根据之前跟诸位学长的探讨，自己的拙见如下：
+
+> I/O trace 就是一些真实在线系统的运行数天的磁盘所接受的 I/O 请求记录。
+
+而 I/O trace 也有着许多格式，例如本文提到的 WebSearch2 就来自于一个流行的搜索引擎，是真实的工作实际负载，它的格式定义遵循 SPC trace 文本规范$^{[1]}$。**厂商之所以将其真实的负载公布出来**，也是为了让学术界对这些数据进行分析科研，让学术界和工业界紧密的结合，达到双赢的目的。
+
+## Download
+
+```shell
+$ wget http://skuld.cs.umass.edu/traces/storage/WebSearch2.spc.bz2
+$ bunzip2 WebSearch2.spc.bz2
+```
+
+这样，我们就得到本文要分析的 trace 文件 `WebSearch2.spc`
+
+## Cognize 拿到一个 trace，首先要了解它的基本格式
+
+```shell
+$ head WebSearch2.spc
+0,21741712,24576,R,0.000774
+1,18960512,24576,R,0.000938
+1,32558896,8192,R,0.008117
+2,21841504,24576,R,0.008252
+2,21841568,8192,R,0.008388
+0,18600896,8192,R,0.011178
+0,30860080,8192,R,0.012703
+0,30503312,8192,R,0.016801
+1,32558944,8192,R,0.020748
+1,20802624,8192,R,0.025710
+
+$ wc -l WebSearch2.spc
+4579809 WebSearch2.spc
+```
+
+**可以看到 trace 由 400w 多行的数据构成，每一行都反映了一次 I/O 请求**。每行用 `,` 号作为分隔符构成 5 个自然域。 将每个自然域以 `$i` 来标识，则每个自然域分别代表：
+
+- `$1` Application specific unit (ASU) 设备号
+- `$2` Logical block address (LBA) 逻辑块地址
+- `$3` Size 请求的数据长度
+- `$4` Opcode 读请求或者写请求，WebSearch2 中只有读请求
+- `$5` Timestamp 请求下达的时间戳
+
+## Analysis
+
+对 trace 及其格式有了基本的认识之后，我们再来做进一步的分析探讨：
+
+- **我们研究的意义是对 trace 进行重播，让我们研究的系统模拟真实负载下的性能**
+- **那么原先的 trace 并不一定适合我们想要测试研究的系统，我们要使用这一 trace 的时候就要对其进行重新组织**
+
+就让我们一步步的从每个自然域来分析下 WebSearch2.spc 这一 trace 文件吧。首先来看下这个 trace 访问设备的频率：
+
+```shell
+$ awk 'BEGIN{FS=","};{print $1}' WebSearch2.spc | sort | uniq -c
+1544375 0
+1517218 1
+1515918 2
+    765 3
+    795 4
+    738 5
+```
+
+可以看到这个 trace 的 I/O 请求主要集中于前三个设备，而且请求是均匀分布的。至于后 3 个设备那稀疏的请求次数，跟具体的系统有关，我们便不得而知了。
+
+**第二个作用域**我们需要关心的是每个设备系统的请求的最大的逻辑块地址，这关系到我们 trace 重播的设计：
+
+```shell
+$ awk 'BEGIN{FS=",";max=0};{if($1==0&&$2>max){max=$2}};END{print max}' WebSearch2.spc
+34967808
+$ awk 'BEGIN{FS=",";max=0};{if($1==1&&$2>max){max=$2}};END{print max}' WebSearch2.spc
+34662560
+$ awk 'BEGIN{FS=",";max=0};{if($1==2&&$2>max){max=$2}};END{print max}' WebSearch2.spc
+25949392
+$ awk 'BEGIN{FS=",";max=0};{if($1==3&&$2>max){max=$2}};END{print max}' WebSearch2.spc
+25949312
+$ awk 'BEGIN{FS=",";max=0};{if($1==4&&$2>max){max=$2}};END{print max}' WebSearch2.spc
+34643200
+$ awk 'BEGIN{FS=",";max=0};{if($1==5&&$2>max){max=$2}};END{print max}' WebSearch2.spc
+34951264
+```
+
+⁉️可以看到最大的 LBA 为 3kw 多，我们至少需要 35000000×512B 的磁盘空间才能满足 trace 的需求。
+
+**第三个作用域**是请求块的大小：
+
+```shell
+$ awk 'BEGIN{FS=","};{print $3}' WebSearch2.spc | sort | uniq -c
+ 495744 16384
+ 406838 24576
+ 912770 32768
+2764457 8192
+```
+
+根据 SPC 文档的规范，size 的单位是 `byte`，于是可以看到请求块的大小只有 4 种分别是：
+
+- 8KB
+- 16KB
+- 24KB
+- 32KB
+
+而 8KB 的请求占大多数，32KB 紧随其后
+
+**第四个作用域**是读请求或者写请求，WebSearch2 的 trace 大部分为读请求，固不做分析处理。
+
+**第五个作用域**是时间戳：
+
+```shell
+$ awk 'BEGIN{FS=",";max=0};{if($5>max){max=$5}};END{print max}' WebSearch2.spc
+15395.556800
+
+$ tail -1 WebSearch2.spc
+2,25487520,8192,R,15395.556800
+```
+
+时间戳是按照请求到达的顺序排列的，最大的时间也是最后一条请求到达的时间。根据 SPC 文档的规范，时间的单位为 `s`，可以看到这个 trace 实际上只是系统运行 4 个多小时的记录。
+
+## Refactoring
+
+我们对 trace 君的百般玩弄主要的目的是在于在我们自己的系统下重放 trace 的负载（*replay trace*），分析系统的性能，主要是其平均响应时间。
+
+**但是我们的系统几乎不太可能与原先 trace 的工作系统一致，于是我们就需要对 trace 进行重构处理**：即处理 trace 的格式
+
+### Single Disk
+
+如果仅对单盘进行 trace 重放，有两种方法。
+
+- 第一种方法，直接忽视设备号，每个请求都视为访问同一设备。
+
+> 优点：实现简单
+
+> 缺点：丧失了原先的局部性，可以造成性能下降
+
+![img](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202409191055884.jpeg)
+
+- 第二种方法，将磁盘扩展，第二个设备视为直接第一个设备的衍生，并依次类推。即新的逻辑块地址=块设备号×总块数+旧逻辑块地址
+
+> 优点：可能保留了局部性
+
+> 缺点：需要进行换算，实现会比较复杂，需要比较大的磁盘
+
+![img](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202409191057170.jpeg)
+
+### Multiple Disk
+
+对于多盘进行 trace 重放，如果盘数恰好相等，则无用多说。
+
+如若不等，则类似 Single Disk 的第二种方法，先将磁盘扩展为单盘，再进行切分。
+
+![img](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202409191058387.jpeg)
+
+### Question
+
+- 如果想要测试磁盘的容量比 trace 的最大偏移地址大很多呢？ 
+
+![img](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202409191059172.jpeg)
+
+- 类 RAID5 的测试：盘内存在校验块
+
+![img](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202409191100751.jpeg)
+
+## Replay trace 的重放也有着两种方式
+
+- 第一种，压力重放，无视时间戳的存在，直接循环中无间断执行每条请求
+- 第二种，守时重放，控制每条请求不能早于时间戳的时间执行
+
+## Future Work
+
+- 多种 trace 的对比
+- tools: disksim
+- etc..
+
+## Rant
+
+- 实验室的文档，传承
+- 引用出处，参考文献

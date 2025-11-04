@@ -1,0 +1,379 @@
+---
+title: Linux 分区更改 fdisk、格式化 mkfs、检查 fsck、挂载 mount
+description: 本文详细介绍 Linux 系统下与磁盘分区相关的有 fdisk、fsck、mkfs、mount 等其他常用命令。
+publishDate: 2024-12-08
+tags: [系统与体系结构]
+heroImage: { src: ../_img/202501222240708.png }
+language: Chinese
+comment: true
+draft: false
+---
+
+Linux 系统下与磁盘分区相关的有 `fdisk`、`fsck`、`mkfs`、`mount` 等这些命令：
+
+- `fdisk` 是用来操作磁盘分区表相关的更改，比如更改分区表格式，创建分区表，新建/删除分区等
+- `mkfs` 则是在创建分区之后负责将分区格式化的工具
+- `mount` 则是将分区挂载到 Linux 的文件树中（与之对应的卸载是 `umount`）
+
+我以向 Linux 系统添加了一块全新的磁盘以拓展存储空间为例。各种命令的详细使用方法使用 `man` 查看，此处不再翻译。
+
+## fdisk
+
+使用 `fdisk` 命令对硬盘进行分区，创建分区表和分区。可以创建主分区、扩展分区和逻辑分区等。
+
+分区完成后，每个分区都会被赋予一个设备节点（例如：`/dev/sda1`，`/dev/sdb2` 等）。
+
+接下来，需要使用 `mkfs` 命令对每个分区进行格式化，例如 `mkfs.ext4`、`mkfs.xfs` 等。
+
+最后，将格式化后的分区挂载到指定的挂载点（目录）上，使其可以被访问和使用。
+
+---
+
+在添加磁盘之前，先执行 `fdisk -l` **列出系统中的物理磁盘**，记录下来，方便与添加磁盘之后做对比，找到新添加的磁盘设备号。
+
+```bash
+root@linux:~$ fdisk -l
+Disk /dev/sda: 20 GiB, 21474836480 bytes, 41943040 sectors
+Units: sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disklabel type: dos
+Disk identifier: 0x25241c74
+Device     Boot    Start      End  Sectors Size Id Type
+/dev/sda1  *        2048 25165823 25163776  12G 83 Linux
+/dev/sda2       25167870 41940991 16773122   8G  5 Extended
+/dev/sda5       25167872 41940991 16773120   8G 82 Linux swap / Solaris
+```
+
+可以看到，目前系统只安装了一块硬盘 `sda`，有三个分区，现在可以关机加硬盘了。加完硬盘后开机再执行 `fdisk -l`
+
+```bash
+root@linux:~$ fdisk -l
+Disk /dev/sda: 20 GiB, 21474836480 bytes, 41943040 sectors
+Units: sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disklabel type: dos
+Disk identifier: 0x25241c74
+Device     Boot    Start      End  Sectors Size Id Type
+/dev/sda1  *        2048 25165823 25163776  12G 83 Linux
+/dev/sda2       25167870 41940991 16773122   8G  5 Extended
+/dev/sda5       25167872 41940991 16773120   8G 82 Linux swap / Solaris
+
+Disk /dev/sdb: 10 GiB, 10737418240 bytes, 20971520 sectors
+Units: sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+```
+
+可以看到，**新添加的硬盘的设备号为 `sdb`，`没有分区表`，没有分区**。接下来就用 `fdisk /dev/sdb` 来创建分区表和分区。
+
+```bash
+root@linux:~$ fdisk /dev/sdb
+Welcome to fdisk (util-linux 2.27.1).
+Changes will remain in memory only, until you decide to write them.
+Be careful before using the write command.
+Device does not contain a recognized partition table.
+Created a new DOS disklabel with disk identifier 0x95942ae2.
+Command (m for help):
+```
+
+不知道怎么操作的此时可以按 `m` 调出帮助界面
+
+```bash
+Command (m for help): m
+Help:
+  DOS (MBR)
+   a   toggle a bootable flag
+   b   edit nested BSD disklabel
+   c   toggle the dos compatibility flag
+  Generic
+   d   delete a partition
+   F   list free unpartitioned space
+   l   list known partition types
+   n   add a new partition
+   p   print the partition table
+   t   change a partition type
+   v   verify the partition table
+   i   print information about a partition
+  Misc
+   m   print this menu
+   u   change display/entry units
+   x   extra functionality (experts only)
+  Script
+   I   load disk layout from sfdisk script file
+   O   dump disk layout to sfdisk script file
+  Save & Exit
+   w   write table to disk and exit
+   q   quit without saving changes
+  Create a new label
+   g   create a new empty GPT partition table
+   G   create a new empty SGI (IRIX) partition table
+   o   create a new empty DOS partition table
+   s   create a new empty Sun partition table
+```
+
+**先创建一个 GPT 分区表**，按 `g`
+
+```bash
+Command (m for help): g
+Created a new GPT disklabel (GUID: F4A12897-62F7-4ABA-9BC3-88BF53550DE3).
+```
+
+分区表创建后创建分区，按 `n` 回车，Partition number、First sector、Last sector 参数不清楚的可以直接回车使用默认参数。
+
+- **指定起始扇区**：按回车使用默认值，通常是第一个可用扇区。
+
+- **指定结束扇区**或分区大小，你可以手动指定结束扇区，也可以通过输入大小来自动计算结束扇区。例如：
+
+  - 输入 `+50G` 创建一个 50 GiB 的分区。
+
+  - 输入 `+200G` 创建一个 200 GiB 的分区。
+
+```bash
+Command (m for help): n
+Partition number (1-128, default 1):
+First sector (2048-20971486, default 2048):
+Last sector, +sectors or +size{K,M,G,T,P} (2048-20971486, default 20971486):
+Created a new partition 1 of type 'Linux filesystem' and of size 10 GiB.
+```
+
+此时已经在这块新加的 10GB 的硬盘中创建了一个 10GB 的分区。
+
+最后按 `w` 将更改信息写入硬盘。
+
+```bash
+Command (m for help): w
+The partition table has been altered.
+Calling ioctl() to re-read partition table.
+Syncing disks.
+```
+
+## mkfs
+
+常见的 File System
+
+- ext2
+- ext3
+- ext4
+- btrfs
+- xfs
+
+虽然说文件系统的种类很多，但大部分 linux 下文件系统都有着类似的结构，包括超级块、inode、数据块、目录块等。
+
+- **超级块**包括了文件系统的总体信息，是文件系统的核心，所以磁盘中会有多个超级块，即使某一些超级块坏了，文件系统依然可用。
+- **inode** 存储着所有与文件有关的数据，比如文件的权限等，并不包括文件内容和文件名。
+- **数据块**是真实存储数据的，**一个数据块默认的大小为 `4KB`**。
+- **目录块**包括文件内容和文件名，以及 inode 的信息。
+
+---
+
+注意：**如果设备上没有分区，或者设备分区上没有文件系统，也会导致挂载失败**。你可以检查设备是否已经被格式化或有文件系统。
+
+```shell
+$ sudo blkid /dev/nvme0n1
+# 为空表示没有文件系统/还没被格式化过
+
+$ sudo mkfs.ext4 /dev/nvme0n1
+mke2fs 1.45.5 (07-Jan-2020)
+Discarding device blocks: done                            
+Creating filesystem with 122096646 4k blocks and 30531584 inodes
+Filesystem UUID: 36df5186-24a0-4dad-9b4e-664a4230b7f1
+Superblock backups stored on blocks: 
+        32768, 98304, 163840, 229376, 294912, 819200, 884736, 1605632, 2654208, 
+        4096000, 7962624, 11239424, 20480000, 23887872, 71663616, 78675968, 
+        102400000
+
+Allocating group tables: done                            
+Writing inode tables: done                            
+Creating journal (262144 blocks): done
+Writing superblocks and filesystem accounting information: done
+
+$ sudo blkid /dev/nvme0n1
+/dev/nvme0n1: UUID="36df5186-24a0-4dad-9b4e-664a4230b7f1" TYPE="ext4"
+
+$ sudo mount <设备> <挂载点>
+
+# 已经被格式化过
+$ sudo blkid /dev/nvme1n1
+/dev/nvme1n1: PTUUID="8e912df5-211c-45ea-a422-6a0f83c045c3" PTTYPE="gpt"
+```
+
+---
+
+接下来 `mkfs.ext4 /dev/sdb1` 格式化该分区（`mkfs` 后面跟着 `.` 与文件系统的格式表明要将目标分区格式化成什么文件系统）
+
+```bash
+root@linux:~$ mkfs.ext4 /dev/sdb1
+mke2fs 1.42.13 (17-May-2015)
+Creating filesystem with 2621179 4k blocks and 655360 inodes
+Filesystem UUID: 886f1d1a-a3ad-4bdf-89b3-54ee0c9238f2
+Superblock backups stored on blocks:
+        32768, 98304, 163840, 229376, 294912, 819200, 884736, 1605632
+Allocating group tables: done
+Writing inode tables: done
+Creating journal (32768 blocks): done
+Writing superblocks and filesystem accounting information: done
+```
+
+## mount
+
+在文件系统中创建一个空目录作为挂载点，并将分区挂载到挂载点
+
+```bash
+root@linux:~$ mkdir /mnt/new_mountpoint
+root@linux:~$ mount -t ext4 /dev/sdb1 /mnt/new_mountpoint/
+```
+
+此时 `/mnt/new_mountpoint/` 下面的存储空间就是此次新添加的10GB磁盘的存储空间，可以用 `df -h` 查看
+
+```bash
+root@linux:~$ df -h
+Filesystem      Size  Used Avail Use% Mounted on
+udev            3.9G     0  3.9G   0% /dev
+tmpfs           799M  9.1M  790M   2% /run
+/dev/sda1        12G  4.5G  6.7G  40% /
+tmpfs           3.9G  188K  3.9G   1% /dev/shm
+tmpfs           5.0M  4.0K  5.0M   1% /run/lock
+tmpfs           3.9G     0  3.9G   0% /sys/fs/cgroup
+tmpfs           799M   24K  799M   1% /run/user/108
+tmpfs           799M     0  799M   0% /run/user/1000
+/dev/sdb1       9.8G   23M  9.2G   1% /mnt/new_mountpoint
+```
+
+---
+
+在使用 `mount` 命令时，设备（source）和挂载点（target）的顺序很重要。**设备**应该在前面，**挂载点**在后面。具体的语法格式如下：
+
+```shell
+$ mount [选项] <设备> <挂载点>
+```
+
+### 具体说明
+
+- **设备**：指的是你要挂载的块设备或文件系统的路径，比如 `/dev/sda1` 或 `/dev/nvme0n1p1`。
+- **挂载点**：指的是挂载该设备的目录路径，比如 `/mnt/nvme0n1`。
+
+### 示例
+
+1. **挂载设备**： 假设你有一个设备 `/dev/sda1`，你想挂载到 `/mnt/data` 目录下，使用如下命令：
+
+   ```shell
+   sudo mount /dev/sda1 /mnt/data
+   ```
+
+2. **挂载文件系统类型**： 如果你想指定文件系统类型（例如 `ext4`），可以使用 `-t` 选项：
+
+   ```shell
+   sudo mount -t ext4 /dev/sda1 /mnt/data
+   ```
+
+3. **卸载设备**： 卸载挂载的设备使用 `umount` 命令：
+
+   ```shell
+   sudo umount /mnt/data
+   ```
+
+### 常用选项
+
+- `-t <type>`：指定文件系统类型，如 `ext4`、`xfs` 等。
+- `-o <options>`：指定挂载选项，如 `ro`（只读）、`rw`（读写）、`noatime`（不更新访问时间）等。
+
+## 总结
+
+`fdisk` 分区挂载更加灵活，可以将磁盘划分为多个分区，每个分区可以有不同的文件系统类型，分区完后仍然需要对每个分区 `mkfs` 格式化文件系统，或者也可以直接 `mkfs` 选择对整个磁盘格式化，但整个磁盘将只能使用一个文件系统类型，无法将磁盘分割为多个独立的区域。
+
+## 常用命令 lsblk、df、du
+
+```shell
+wyk 09:20:49 ~
+$ lsblk
+NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+loop0         7:0    0  79.9M  1 loop /snap/lxd/22923
+loop1         7:1    0    62M  1 loop /snap/core20/1587
+loop3         7:3    0  38.8M  1 loop /snap/snapd/21759
+loop4         7:4    0  63.9M  1 loop /snap/core20/2318
+loop5         7:5    0    87M  1 loop /snap/lxd/28373
+sda           8:0    0 447.1G  0 disk 
+├─sda1        8:1    0     1G  0 part 
+└─sda2        8:2    0 446.1G  0 part /old8003-2
+sdb           8:16   0   1.8T  0 disk /home/cyf/hdd
+nvme4n1     259:0    0 894.3G  0 disk /home/lzh/ssd
+nvme3n1     259:1    0 894.3G  0 disk /home/wyk/ssd
+nvme2n1     259:2    0 894.3G  0 disk 
+├─nvme2n1p1 259:3    0     1G  0 part /boot/efi
+└─nvme2n1p2 259:4    0 893.2G  0 part /
+nvme0n1     259:5    0 894.3G  0 disk /home/cyf/ssd0
+nvme1n1     259:6    0 894.3G  0 disk /home/cyf/ssd1
+
+wyk 09:21:02 ~
+$ df -h
+Filesystem      Size  Used Avail Use% Mounted on
+tmpfs            13G  3.3M   13G   1% /run
+/dev/nvme2n1p2  879G  308G  527G  37% /
+tmpfs            63G     0   63G   0% /dev/shm
+tmpfs           5.0M     0  5.0M   0% /run/lock
+/dev/nvme2n1p1  1.1G  6.1M  1.1G   1% /boot/efi
+/dev/sda2       439G  336G   81G  81% /old8003-2
+/dev/nvme3n1    880G   28K  835G   1% /home/wyk/ssd
+
+wyk 09:17:50 ~
+$ sudo du -h --max-depth=1 /old8003-2/home/
+30G     /old8003-2/home/ymx
+6.4G    /old8003-2/home/cjh
+72G     /old8003-2/home/cyf
+15G     /old8003-2/home/zzh
+2.1G    /old8003-2/home/jyc
+525M    /old8003-2/home/astl
+2.7G    /old8003-2/home/lcc
+1.1G    /old8003-2/home/whs
+1.6G    /old8003-2/home/olh
+6.4G    /old8003-2/home/wyk
+95G     /old8003-2/home/lzh
+8.0G    /old8003-2/home/zyu
+239G    /old8003-2/home
+
+wyk 09:24:37 ~
+$ lsblk -d -o name,rota
+NAME    ROTA
+loop0      0
+loop1      0
+loop3      0
+loop4      0
+loop5      0
+sda        0
+sdb        1
+nvme4n1    0
+nvme3n1    0
+nvme2n1    0
+nvme0n1    0
+nvme1n1    0
+wyk 09:24:44 ~
+```
+
+> `lsblk -d -o name,rota` 对于其返回值，看 ROTA 值来判断： 
+>
+> 若 ROTA=1，则意味该硬盘旋转，则其为机械硬盘； 
+>
+> 若 ROTA=0，则意味着该盘为固态硬盘； 
+>
+> 对于上述打印结果，**sdb** 为固态硬盘，**sda** 为机械硬盘。
+
+执行 `sudo umount /old8003-1` **不会擦除 SSD 上的数据**。
+
+`umount` 命令只是**卸载文件系统**，意味着它将断开挂载点和设备的关联，让该挂载点不再可访问。数据仍然保留在 SSD 上的分区中，**没有被删除**。
+
+简单来说：
+
+- `umount`: 只断开文件系统，不会对数据产生任何影响。
+- 数据还在磁盘上，只是暂时不可通过该挂载点访问。
+
+要删除数据，通常需要**格式化磁盘**或者手动删除文件。
+
+> 某个 ssd/hdd 还挂载在某个目录下，如果要清除上面的数据并挂载到自己指定目录下要怎么做（全流程）
+
+- 这将显示所有在 `/old8003-1` 目录下活动的文件和进程。如果有进程正在使用该目录，可以终止它们或手动关闭它们：`sudo lsof /old8003-1`
+- 格式化前先取消磁盘的挂载 `sudo umount /old8003-1`
+- 可以选择 `sudo fdisk /dev/nvme3n1` 对磁盘进行分区，也可以不分区， 直接把整个磁盘格式化（就没有 nvme3n1p1、nvme3n1p2 这类分区了）
+- 指定分区的格式化文件系统类型 `sudo mkfs.ext4 /dev/nvme3n1`
+- 最后挂载上去即可 `sudo mount ~/ssd /dev/nvme3n1`

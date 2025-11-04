@@ -1,0 +1,134 @@
+---
+title: 持久性内存｜Persistent Memory
+description: 持久化内存（Persistent Memory，简称 PMEM），也叫非易失性内存（Non-Volatile Memory，简称 NVM），是指一类支持字节寻址（Byte-Addressable）、可以通过 CPU 指令直接进行操作、断电后数据不丢失的存储硬件。
+publishDate: 2024-11-01
+tags: [系统与体系结构]
+heroImage: { src: ../_img/202501222309189.png }
+language: Chinese
+comment: true
+draft: false
+---
+
+## 分层存储
+
+学过计算机原理的人都知道，计算机系统的存储采用分层的结构（如上图所示 ）。其中，CPU regiesters、CPU Caches 和 DRAM 都是易失性的（volatile），SSD、HDD、Tape 是非易失性的（non-volatile）。
+
+企业级 SSD 可以提供 10 微秒级别的响应时间，DRAM 的响应时间大约是 100 纳秒这个级别。SSD 的响应时间和 DRAM 有着差不多 100 倍的差距。而 DRAM 和最后一级 CPU Cache 的响应时间只有 8~10 倍的差距。
+
+很明显，DRAM 和 SSD 之间存在比较巨大的性能鸿沟。所以在设计应用程序的时候，需要特别注意 I/O 相关的操作，避免 I/O 成为系统的性能瓶颈。
+
+## 持久化内存
+
+持久化内存（Persistent Memory，简称 PMEM），也叫非易失性内存（Non-Volatile Memory，简称 NVM），是指一类支持字节寻址（Byte-Addressable）、可以通过 CPU 指令直接进行操作、断电后数据不丢失的存储硬件。
+
+> [计算机系统的分层存储](https://docs.pmem.io/persistent-memory/getting-started-guide/introduction)
+
+![20200910163421](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202411011829692.png)
+
+PMEM 提供亚微秒级别的延迟时间。从成本、性能、容量上看，PMEM 是位于 DRAM 和 SSD 之间的一层存储。PMEM 的出现，填补了 DRAM 和 SSD 之间的性能鸿沟，同时也将影响存储软件的架构设计。
+
+## Optane DIMMs
+
+「**学术界**」在很早以前就开始了对持久化内存的研究，比如：
+
+1. [NOVA: A Log-structured File System for Hybrid Volatile/Non-volatile Main Memories](https://link.zhihu.com/?target=https%3A//www.usenix.org/system/files/conference/fast16/fast16-papers-xu.pdf)
+2. [Bztree: A High-performance Latchfree Range Index for Non-volatile Memory](https://link.zhihu.com/?target=http%3A//www.vldb.org/pvldb/vol11/p553-arulraj.pdf)
+3. [Let's talk about storage: Recovery methods for nonvolatile memory database systems](https://link.zhihu.com/?target=https%3A//www.pdl.cmu.edu/PDL-FTP/NVM/storage.pdf)
+4. ……
+
+**但以前没有真实的持久化内存硬件，只能基于软件模拟器进行仿真测试**。直到 2019 年 4 月，Intel 发布了第一款企业级的持久化内存 —— Intel Optane DC Persistent Memory（下面简称 **Optane DIMMs**）。
+
+**由于模拟器没法百分之百模拟硬件，之前通过模拟器仿真出来的研究结果和真实硬件下的测试结果还是有一些差别的**。在 FAST'20 上，有人发表了一篇论文，介绍 Intel Optane DC Persistent Memory 的使用特点 —— [An Empirical Guide to the Behavior and Use of Scalable Persistent Memory](https://www.usenix.org/conference/fast20/presentation/yang)。
+
+Intel Optane DC Persistent Memory 是目前唯一一款量产的持久化内存，同时目前也只有 Intel 的 Cascade Lake 处理器支持这款持久化内存。
+
+> Intel Optane DC Persistent Memory
+
+![image-20241101183105702](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202411011831743.png)
+
+如上图所示，Optane DIMMs 采用和 DRAM 一样的 DIMM 接口。这意味着，Optane DIMMs 可以直接插在内存插槽上，通过内存总线和 CPU 通信，而 CPU 也可以通过指令直接操作 Optane DIMMs。
+
+## Optane DIMMs 的持久化
+
+Optane DIMM 有两种工作模式：Memory Mode 和 App Direct Mode。
+
+1. Memory Mode 简单说就是把 Optane DIMMs 当成易失性内存使用，把 DRAM 当作 CPU 和 Optane DIMMs 之间的 cache，并且 DRAM 对外不可见（就像 CPU 的多级 cache 对外也不可见）。基于 Memory Mode 的工作模式，可以通过应用无感知的方式，解决一些内存数据库（比如 Redis、Memcached）单机 DRAM 容量不足或成本过高的问题。
+2. App Direct Mode 将 Optane DIMMs 当成一个持久化设备来使用，直接通过 CPU 指令读写 Optane DIMMs，不需要经过 DRAM。应用可以使用能够感知持久化内存的文件系统（比如 EXT4-DAX、XFS-DAX、NOVA）或其他组件（比如 PMDK）来管理、操作持久化内存设备。 Memory Mode 由于不考虑持久化问题，一般情况下将其当做一块更大的 DRAM 使用即可。
+
+在 App Direct Mode 工作模式下，尽管 Optane DIMMs 设备本身是非易失的，但是由于有 CPU Cache 的存在，当设备掉电时，“还没写入” Optane DIMMs 的数据还是会丢失。
+
+> [Asynchronous DRAM Refresh](https://www.usenix.org/sites/default/files/conference/protected-files/fast20_slides_izraelevitz.pdf)
+
+![image-20241101181747727](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202411011817888.png)
+
+为了数据的持久化，Intel 提出了 Asynchronous DRAM Refresh（ADR）机制。ADR 机制保证，一旦写请求达到 ADR 中的 WPQ（Write Pending Queue），就能保证数据的持久性。除了 WPQ，Optane DIMMs 上也有缓存数据，ADR 机制同样会保证这部分数据的持久化。
+
+但是，ADR 机制无法保证 CPU Cache 中的数据的持久化。为了保证 CPU Cache 上的数据持久化，可以调用 CLFLUSHOPT 或 CLWB 指令，将 CPU Cache Line Flush 到 Optane DIMMs 中：
+
+- `CLFLUSHOPT` 指令执行完成后，CPU Cache 中的相关数据被逐出。
+- `CLWB` 指令执行完成后，CPU Cache 中的相关数据依然有效。 由于，CLFLUSHOPT 和 CLWB 指令都是异步执行的，所以一般需要跟随一个 SFENCE 指令，以保证 Flush 执行完成。
+
+CPU 还提供了 `NTSTORE`（Non-temporal stores）指令可以做到数据写入的时候 bypass CPU Cache，这样就不需要额外的 Flush 操作了。
+
+## Optane DIMMs 的读写延迟
+
+![image-20241101181909719](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202411011819816.png)
+
+从论文中的测试数据看，Optane DIMMs 的读延迟是 DRAM 的 2~3 倍。另外，Optane DIMMs 顺序读的速度是随机读的 1.8 倍，相比之下，DRAM 顺序读的速度只有随机读的 1.2 倍。
+
+由于写入 Optane DIMMs 的数据只需要到达 ADR 的 WPQ 即可，DRAM 和 Optane DIMMs 的写入延迟接近。
+
+![image-20241101182001161](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202411011820219.png)
+
+> 图正上方的三个数字的含义是：load 线程数 / ntstore 线程数 / store + clwb 线程数
+
+DRAM 的读写带宽几乎不受数据大小和并发线程数的影响，速度很快并且非常稳定。对 DRAM 来说，读带宽大约是写带宽的 1.3 倍，但是 Optane DIMMs 读带宽是写带宽的 2.9 倍。
+
+Optane DIMMs 的读写带宽在读写数据大小为 256B 时达到最大值。这是因为 Optane DIMMs 虽然支持字节寻址，但是每次读写的最小粒度是 256B。当一次读操作小于 256B 时，会浪费一些带宽。当一次写操作小于 256B 时，就会被转换成一次 read-modify-write，造成写放大（这点和 SSD 很像，只不过粒度更小，SSD 一般是大于等于 4KB）。
+
+最后，根据上图的最右所示，Optane DIMMs 在并发线程数较多且访问数据为 4KB 时，带宽掉了个大坑 —— 这和 Optane DIMMs 内部结构有关。主要原因有两个：
+
+1. 对内部 buffer/cache 和内存控制器（iMC） 的争用。
+2. 由于多条 Optane DIMMs 采用 4KB 交叉的方式组织成一个完整的持久化内存地址空间。每次访问对齐的 4 KB，请求都只能落在一条 Optane DIMMs 上，无法发挥多条 Optane DIMMs 通道并行执行的能力。
+
+![image-20241101182129772](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202411011821895.png)
+
+✅论文的最后总结了 4 条 Optane DIMMs 的最佳实践：
+
+1. Avoid random accesses smaller than < 256 B. 避免小于 256 字节的随机读写。
+2. Use non-temporal stores when possible for large transfers, and control of cache evictions. 大内存操作时，使用 ntstore 指令绕过 CPU Cache。
+3. Limit the number of concurrent threads accessing a 3D XPoint DIMM. 限制一个 Optane DIMMs 通道的并发数。
+4. Avoid NUMA accesses (especially read-modify-write sequences). 避免 NUMA 访问。其实内存也一样，远端内存比本地内存要慢不少，这个问题在 Optane DIMMs 表现更突出，需要特别注意。
+
+更具体的内容，建议大家去看论文。
+
+[Basic Performance Measurements of the Intel Optane DC Persistent Memory Module](https://arxiv.org/pdf/1903.05714v3) 这一篇也比较有代表性，数据更详细。
+
+## PMDK 简介
+
+前面说了，为了保证数据的持久化，需要在合适的地方用一些底层的 CPU 指令来保证。这样做有两个明显的缺点：
+
+1. 太过于底层，代码写起来麻烦。
+2. 可移植性差，不同 CPU 的指令是不一样的。
+
+为了简化基于持久化内存的应用开发，Intel 开发和维护了 [Persistent Memory Development Kit](https://link.zhihu.com/?target=https%3A//pmem.io/) 这个开源组件。虽然这个组件目前由 Intel 开发和维护，但是理论上 PMDK 是与具体的硬件平台无关的——虽然现在依然只有 Intel 的一款持久化内存量产了。
+
+PMDK 中的库可以分成两大类：
+
+1. Volatile libraries。如果不关心数据的持久化，只想通过 persistent memory 扩展内存，可以使用这一类库。
+2. Persistent libraries。如果想要保证数据的 fail-safe，需要使用这一类库。
+
+**Volatile libraries**
+
+1. [libmemkind](https://link.zhihu.com/?target=https%3A//github.com/memkind/memkind) 提供 malloc 风格的接口，可以将持久化内存当成 DRAM 使用。
+2. [libvmemcache](https://link.zhihu.com/?target=https%3A//pmem.io/vmemcache/manpages/master/vmemcache.3.html) 是一个针对持久化内存的特点优化的易失性 LRU 缓存。
+
+**Persistent libraries**
+
+1. [libpmem](https://link.zhihu.com/?target=https%3A//pmem.io/pmdk/libpmem/) 提供比较底层的操作持久化内存的接口，比如 pmem_map 类似 mmap、pmem_memcpy 类似 memcpy，具体可以参考官方文档。
+2. [libpmemobj](https://link.zhihu.com/?target=https%3A//pmem.io/pmdk/libpmemobj/) 提供基于持久化内存的对象存储能力。
+3. [libpmemkv](https://link.zhihu.com/?target=https%3A//pmem.io/pmemkv/) 是一个基于持久化内存的嵌入式 Key-Value 引擎，基于 B+ 树实现，针对读优化（[libpmemkv 的内部实现](https://link.zhihu.com/?target=https%3A//pmem.io/2017/02/21/pmemkv-intro.html)）。
+4. [libpmemlog](https://link.zhihu.com/?target=https%3A//pmem.io/pmdk/manpages/linux/master/libpmemlog/libpmemlog.7.html) 提供 append-only 的日志文件接口。
+5. [libpmemblk](https://link.zhihu.com/?target=https%3A//pmem.io/pmdk/libpmemblk/) 提供块存储接口，简单说就是将持久化内存抽象成一个数组。
+
+除此之外，PMDK 还提供了一些工具和命令用于辅助开发和部署基于持久化内存的应用，具体参考 [PMDK 官方文档](https://link.zhihu.com/?target=https%3A//pmem.io/pmdk/)。

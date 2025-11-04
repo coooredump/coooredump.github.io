@@ -1,0 +1,429 @@
+---
+title: 八股文 @ 场景题
+description: 记录面经高频场景题，实时更新中...
+publishDate: 2025-08-23
+tags: [秋招指南]
+heroImage: { src: ../_img/20250823-vpZNIK.png }
+language: Chinese
+comment: true
+draft: false
+---
+
+> 记录高频场景题，部分内容自行搜索
+
+## 快排存在的问题，如何优化？
+
+3 种快排基准选择方法：
+
+- 随机（rand 函数）
+- 固定（队首、队尾）
+- 三数取中（队首、队中和队尾的中间数）
+
+4 种优化方式：
+
+- 优化 1：当待排序序列的长度分割到一定大小后，使用插入排序
+- 优化 2：在一次分割结束后，可以把与 key 相等的元素聚在一起，继续下次分割时，不用再对与 key 相等元素分割
+- 优化 3：优化递归操作
+- 优化 4：使用并行或多线程处理子序列
+
+## 写三个线程交替打印 ABC
+
+```cpp
+#include <iostream>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+
+std::mutex mtx;
+std::condition_variable cv;
+int turn = 0;
+
+void print(char c, int id) {
+    for (int i = 0; i < 5; i++) {
+        std::unique_lock<std::mutex> lock(mtx);
+        cv.wait(lock, [id] { return turn == id; });
+        std::cout << c;
+        turn = (turn + 1) % 3;
+        cv.notify_all();
+    }
+}
+
+int main() {
+    std::thread A(print, 'A', 0);
+    std::thread B(print, 'B', 1);
+    std::thread C(print, 'C', 2);
+    
+    A.join(); B.join(); C.join();
+    std::cout << std::endl;
+    return 0;
+}
+```
+
+## 不使用临时变量实现 swap 函数
+
+```cpp
+void swap_xor(int a, int b) {
+    a ^= b;
+    b ^= a;
+    a ^= b;
+}
+```
+
+## ✍️ Top K 问题（可以采取的方法有哪些，各自优点）
+
+...
+
+## ✍️ 8G 的 int 型数据，计算机的内存只有 2G，怎么对它进行排序？
+
+...
+
+## ✍️ 手撕线程安全的单例模式
+
+...
+
+## 手撕 shared_ptr（线程安全）
+
+### 非线程安全的简单实现
+
+```cpp
+#include <memory>
+
+template<typename T>
+class smartPtr {
+private:
+    T *_ptr;
+    size_t* _count;
+
+public:
+    smartPtr(T *ptr = nullptr):_ptr(ptr) {
+        if (_ptr) {
+            _count = new size_t(1);
+        } else {
+            _count = new size_t(0);
+        }
+    }
+
+    smartPtr(const smartPtr &ptr) {
+        if (this != &ptr) {
+            this->_ptr = ptr._ptr;
+            this->_count = ptr._count;
+            ++(*this->_count)   ;
+        }
+    }
+
+    smartPtr& operator=(const smartPtr &ptr) {
+        if (this->_ptr == ptr._ptr)
+            return *this;
+
+        if (this->_ptr) {
+            --(*this->_count);
+            if (this->_count == 0) {
+                delete this->_ptr;
+                delete this->_count;
+            }
+        }
+
+        this->_ptr = ptr._ptr;
+        this->_count = ptr._count;
+        ++(*this->_count);
+
+        return *this;
+    }
+
+    ~smartPtr() {
+        --(*this->_count);
+        if (0 == *this->_count) {
+            delete this->_ptr;
+            delete this->_count;
+        }
+    }
+
+    size_t use_count() {
+        return *this->_count;
+    }
+
+    T& operator*() {
+        assert(this->_ptr == nullptr);
+        return *(this->_ptr);
+    }
+
+    T* operator->() {
+        assert(this->_ptr == nullptr);
+        return this->_ptr;
+    }
+};
+```
+
+### 基于原子操作的线程安全实现
+
+```cpp
+#pragma once
+
+#include <atomic>  // 引入原子操作
+
+template <typename T>
+class shared_ptr {
+private:
+  T* ptr;                               // 指向管理的对象
+  std::atomic<std::size_t>* ref_count;  // 原子引用计数
+
+  // 释放资源
+  void release() {
+    // P.S. 这里使用 std::memory_order_acq_rel 内存序，保证释放资源的同步
+    if (ref_count && ref_count->fetch_sub(1, std::memory_order_acq_rel) == 1) {
+      delete ptr;
+      delete ref_count;
+    }
+  }
+
+public:
+  // 默认构造函数
+  shared_ptr() : ptr(nullptr), ref_count(nullptr) {}
+
+  // 构造函数
+  // P.S. 这里使用 explicit 关键字，防止隐式类型转换
+  // shared_ptr<int> ptr1 = new int(10);  不允许出现
+  explicit shared_ptr(T* p) : ptr(p), ref_count(p ? new std::atomic<std::size_t>(1) : nullptr) {}
+
+  // 析构函数
+  ~shared_ptr() { release(); }
+
+  // 拷贝构造函数
+  shared_ptr(const shared_ptr<T>& other) : ptr(other.ptr), ref_count(other.ref_count) {
+    if (ref_count) {
+      ref_count->fetch_add(1, std::memory_order_relaxed);  // 引用计数增加，不需要强内存序
+    }
+  }
+
+  // 拷贝赋值运算符
+  shared_ptr<T>& operator=(const shared_ptr<T>& other) {
+    if (this != &other) {
+      release();  // 释放当前资源
+      ptr = other.ptr;
+      ref_count = other.ref_count;
+      if (ref_count) {
+        ref_count->fetch_add(1, std::memory_order_relaxed);  // 引用计数增加
+      }
+    }
+    return *this;
+  }
+
+  // 移动构造函数
+  // P.S. noexcept 关键字表示该函数不会抛出异常。
+  // 标准库中的某些操作（如 std::swap）要求移动操作是 noexcept 的，以确保异常安全。
+  // noexcept 可以帮助编译器生成更高效的代码，因为它不需要为异常处理生成额外的代码。
+  shared_ptr(shared_ptr<T>&& other) noexcept : ptr(other.ptr), ref_count(other.ref_count) {
+    other.ptr = nullptr;
+    other.ref_count = nullptr;
+  }
+
+  // 移动赋值运算符
+  shared_ptr<T>& operator=(shared_ptr<T>&& other) noexcept {
+    if (this != &other) {
+      release();  // 释放当前资源
+      ptr = other.ptr;
+      ref_count = other.ref_count;
+      other.ptr = nullptr;
+      other.ref_count = nullptr;
+    }
+    return *this;
+  }
+
+  // 解引用运算符
+  // P.S. const 关键字表示该函数不会修改对象的状态。
+  T& operator*() const { return *ptr; }
+
+  // 箭头运算符
+  T* operator->() const { return ptr; }
+
+  // 获取引用计数
+  std::size_t use_count() const { return ref_count ? ref_count->load(std::memory_order_acquire) : 0; }
+
+  // 获取原始指针
+  T* get() const { return ptr; }
+
+  // 重置指针
+  void reset(T* p = nullptr) {
+    release();
+    ptr = p;
+    ref_count = p ? new std::atomic<std::size_t>(1) : nullptr;
+  }
+};
+```
+
+## ✍️ 手撕线程池
+
+...
+
+## ✍️ 手撕 string
+
+...
+
+## ✍️ 手撕 ringbuffer
+
+...
+
+## ✍️ 实现一个线程安全的带过期时间的 FIFO Cache
+
+...
+
+## ✍️ 实现一个线程安全的带过期时间的 LRU
+
+...
+
+## ✍️ 一致性哈希
+
+...
+
+## ✍️ 海量数据的 bitmap 使用原理
+
+...
+
+## ✍️ 布隆过滤器原理与优点
+
+...
+
+## 高并发情况下对 LRU 的优化方案
+
+### 痛点
+
+**全局锁/链表热点**：经典 LRU 的 head/tail 在高并发下极易形成热点。
+
+**每次访问都要“提到头”**：更新双向链表成本高，频繁 CAS/锁冲突。
+
+**淘汰路径阻塞读写**：命中/写入与淘汰耦合，尾部扫描占用临界区。
+
+**冷热抖动/缓存污染**：短瞬热键把冷数据顶走。
+
+### 优化思路（从易到难逐级上车）
+
+#### 1) 分片化 + 本地 LRU
+
+- **做法**：按 key 的 hash 做分片（shard），每片一个独立 LRU（或近似 LRU），容量按权重均分或动态调。
+- **锁策略**：每片用细粒度锁/读写锁；读命中尽量无锁，写与晋升仅锁所在分片。
+- **优点**：消除全局热点，线性提升吞吐；工程复杂度低。
+- **要点**：分片数 ≈ 2–4×CPU 核数；用 **striped LongAdder** 做指标计数，减少原子热点。
+
+#### 2) 近似 LRU，降低更新成本
+
+- **CLOCK/CLOCK-Pro**：用环形指针+访问位替代双向链表，晋升成本 O(1)，冲突小。
+- **2Q/SLRU**：新到/短热进 A 队列；稳定热留在 B 队列（或 Probation/Protected），抑制一次性流量污染。
+- **优点**：命中率接近 LRU，且更抗“瞬时热键”；实现简单，晋升轻。
+
+#### 3) Admission + TinyLFU（高命中率方案，参考 Caffeine 思路）
+
+- **做法**：把淘汰决策拆成两步：
+    1. **Admission**：用 Count-Min Sketch 统计最近频次，只有当新键的估计频次 ≥ 牺牲者时才接纳（W-TinyLFU）。
+    2. **分层缓存**：Window（短热）+ Protected（稳定热）+ Probation（候选）三层滑动窗口。
+- **优点**：在长尾流量、穿透流量下显著提高命中率；减少无效写入。
+- **代价**：实现复杂一点，需要周期性衰减 Sketch。
+
+#### 4) 访问路径“无锁化”，把晋升/淘汰异步化
+
+- **核心手法**：
+    - 读路径只做 **O(1) 查表**（ConcurrentHashMap/lock-free map），把“命中事件”写入每分片的 **MPSC ring buffer**。
+    - 独立 **单线程维护者（per-shard maintainer）** 从队列批量消费事件，顺序更新近似 LRU 的元数据与淘汰。
+- **效果**：读路径彻底避开链表/锁；写放大被批处理吸收，减少抖动。
+- **实现提示**：
+    - ring buffer 长度按峰值 QPS×延迟上限估算；丢弃策略用 coalesce（只保留最近一次命中标记）。
+    - 淘汰与值回收放在维护线程，避免在读线程做内存管理。
+
+#### 5) 批量淘汰 & 背景回收
+
+- **做法**：容量接近阈值时，维护线程一次淘汰 N 个（例如 1–2% 容量）而不是逐个淘汰。
+- **好处**：减少频繁进入临界区；尾部扫描可顺序内存访问，CPU 友好。
+
+#### 6) 多级/多层缓存
+
+- **本地 L1（进程内） + 远端 L2（Redis/MC）**：L1 用近似 LRU + Admission，L2 用简单 LRU/TTL。
+- **跨核/跨机**：本地每核分片 + 机内共享 L2，减少跨 NUMA 抖动。
+- **跨机一致性**：允许短暂不一致，配合 **stale-while-revalidate**。
+
+#### 7) 数据结构与内存优化
+
+- **索引**：map 索引 + 紧凑元数据（指针压缩、索引 offset）；避免频繁分配（对象池/arena/slab）。
+- **计数器**：热点计数用 **LongAdder/striped**；Sketch 用 uint32 环形衰减。
+- **Java 场景**：尽量 **off-heap** 存元数据/大 value；避免大对象导致频繁 GC。
+- **回收**：RCU/epoch-based 回收，减少停顿；避免 ABA 可用带版本的指针或 tag。
+
+#### 8) 防击穿/雪崩/穿透的配套
+
+- **singleflight**：同 key 的 miss 合并成一次回源。
+- **自适应 TTL + 负缓存**：短暂缓存“未命中/404”，降低穿透。
+- **退避/限流**：上游慢时降低 admission、缩短 window；必要时降级只读旧值。
+
+## 高德地图导航网络架构设计
+
+> 场景题：现在导航功能越来越丰富了，现在对云端的依赖越来越强，在这个背景下，我们有大量的网络业务要去做相关的业务请求，但是我们测试的车在路上跑，他的网络性能带宽相对来说不稳定性会比较强，基于费用的考虑这个整体的流量也是一个需要考虑的事情，所以整体网络上大模块的设计要考虑几个因素：
+>
+> - 第一个就是并发量的问题，如果并发量过大，性能负载非常高，但是车机系统给我们导航的性能负载是有限的，所以会存在瓶颈的问题
+> - 第二个就是网络的好坏差异也会影响成功率
+> - 第三个就是我们有那么多的业务去做变化，然后流量这方面也是一个负担，那如何去进一步降低流量这方面的消耗
+> - 基于以上几点，你要怎么去设计一个网络并发请求管理的模块，使得整体达到一个符合业务需要的效果，你会从几个方面进行切入设计呢？
+
+好的，这是一个非常经典且实际的工程问题。结合您提出的车载导航系统场景，我将从一个资深架构师的角度，系统地阐述如何设计这样一个网络并发请求管理模块。
+
+这个设计的核心目标是：**在有限的车机资源和不稳定的网络环境下，通过智能的请求管理，确保高优先级业务的成功率和实时性，同时最大限度地降低流量消耗和系统负载。**
+
+我们可以从以下几个核心方面进行切入设计：
+
+### 一、核心架构：分层与队列管理
+
+首先，模块不应该让业务方直接发起请求，而应该通过一个中心化的管理器。这使我们能够实施统一的策略。
+
+**1. 请求池/队列管理器**
+*   **分级队列**：将业务请求按照**优先级**进行分类。例如：
+    *   **实时关键队列：** 路线计算、交通事件、实时路况更新。这些请求必须低延迟、高成功率。
+    *   **普通队列：** 沿途搜索、地址详情查询。可以容忍一定延迟。
+    *   **批量/延迟队列：** 地图瓦片预加载、日志上报、非关键数据同步。可以等待网络良好时批量发送。
+*   **并发控制器**：设置一个全局的并发请求数上限（例如，根据车机性能定为 4-6 个）。管理器从高优先级队列中取出请求执行，只有当高优先级队列为空时，才处理低优先级队列。这直接解决了**并发量过大导致的性能瓶颈**问题。
+
+**2. 智能调度器**：调度器是大脑，它根据当前系统状态决定何时发送何请求。
+
+*   **网络状态感知：** 模块需要实时监听网络类型（5G/4G/Wi-Fi）和信号强度。可以定义几个状态：`EXCELLENT`, `GOOD`, `POOR`, `DISCONNECTED`。
+*   **动态策略调整：**
+    *   网络 `GOOD` 以上：正常处理所有队列。
+    *   网络 `POOR`：自动降级。例如，只发送实时关键队列的请求；降低实时路况更新的频率；暂停批量队列。
+    *   网络 `DISCONNECTED`：缓存所有可缓存的请求，并提示用户。
+
+### 二、流量优化：减少不必要的数据传输
+
+这是降低流量负担的关键。
+
+**1. 请求去重与合并**
+
+*   **去重：** 在短时间内，如果有多个完全相同的请求（例如，同一路段的实时路况），只发送一个，返回的结果共享给所有请求者。
+*   **合并：** 对于批量队列中的小请求（例如，多个POI的详情查询），可以将它们在客户端打包成一个批量请求发送到云端，云端处理后返回一个合并的响应。这大大减少了HTTP头等冗余数据的传输。
+
+**2. 数据压缩与差分更新**
+
+*   **压缩：** 请求和响应体都使用高效的压缩算法（如 GZIP, Brotli）。
+*   **差分更新：** 这是流量优化的“大杀器”。
+    *   **原理：** 客户端本地缓存已有数据（如旧版地图数据、之前的路线信息）。当需要更新时，客户端将当前数据的版本号或哈希值发给服务端。
+    *   **服务端：** 计算新旧数据之间的“差异”（Delta），只将这个很小的差异包返回给客户端。
+    *   **客户端：** 根据差异包和本地数据，合成最新数据。
+    *   **应用场景：** 路线变更、地图增量更新、交通信息流。这能减少高达90%的流量。
+
+**3. 缓存策略**
+*   **多级缓存：** 实现内存缓存 + 磁盘缓存。
+    *   对于静态或半静态数据（如地图瓦片、城市基础信息），设置很长的过期时间。
+    *   对于动态数据（如实时路况），设置较短的过期时间（如30秒）。在过期时间内，直接使用缓存，不发请求。
+*   **缓存有效性：** 通过服务端返回的 `ETag` 或 `Last-Modified` 头，在请求时进行验证，如果数据未变，则返回304 Not Modified，节省响应体流量。
+
+### 三、容错与稳定性：提升弱网下的成功率
+
+**1. 重试与退避机制**
+
+*   **智能重试：** 不是所有失败都重试。仅对网络错误、5xx服务器错误等进行重试，而对4xx客户端错误则不重试。
+*   **指数退避：** 重试的时间间隔逐渐延长（如1s, 2s, 4s, 8s...），避免在服务器临时故障时加剧其压力。
+*   **优先级关联：** 高优先级请求的重试次数可以更多，间隔更短；低优先级请求则相反。
+
+**2. 请求超时与熔断**
+
+*   **动态超时：** 根据网络状况和请求优先级设置不同的超时时间。弱网环境下，适当延长超时时间。
+*   **熔断器模式：**
+    *   当某个服务端接口失败率超过阈值时，熔断器会“跳闸”。
+    *   在接下来的一段时间内，所有对该接口的请求会立即失败，而不再真正发出网络请求。
+    *   经过一个冷却时间后，熔断器进入“半开”状态，试探性地放一个请求过去，如果成功则关闭熔断器，恢复流量。
+    *   **作用：** 防止因某个后端服务故障而导致客户端资源（线程、连接）被耗尽和流量浪费。
+

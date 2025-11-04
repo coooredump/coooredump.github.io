@@ -1,0 +1,436 @@
+---
+title: 2025.04.12 饿了么笔试题
+description: 饿了么 20250412 笔试解析
+publishDate: 2025-04-12
+tags: [秋招指南]
+heroImage: { src: ../_img/20250810-4Ol2Ne.avif }
+language: Chinese
+comment: true
+draft: false
+---
+
+> 题解链接：https://mp.weixin.qq.com/s/uWZalLLGSpPh8HxLeUtQOA
+> 
+> 测评链接：https://niumacode.com/training/68
+
+## 1. 小红的小苯题
+
+小红拿到了一个正整数 x，小苯希望小红找到一个正整数 y，满足 x ⊕ y 既是 x 的因子，也是 y 的因子，你能帮帮小红吗?
+
+在这里，⊕ 表示位运算中的按位异或操作。
+
+> 输入描述
+
+如果存在解，请输出一个正整数 y (1 ≤ y ≤ $10^{18}$)，代表询问的答案。如果无解，请输出 -1。
+
+如果存在多个解决方案，您可以输出任意一个，系统会自动判定是否正确。注意，自测运行功能可能因此返回错误结果，请自行检查答案正确性。
+
+> 示例 1
+
+输入：
+
+```cpp
+6
+```
+
+输出：
+
+```cpp
+4
+```
+
+解释：对样例 1，由于 6⊕4 = 2，而 2 同时是 4 和 6 两个数字的因数。
+
+⚠️ 注意，本题答案不唯一。
+
+> 代码：脑筋急转弯
+
+因为 1 是所有数字的因子，所以直接让 `y=x^1`，凑出 1 即可。
+
+```cpp
+#include <iostream>
+using namespace std;
+
+int main() {
+    long x;
+    cin >> x;
+
+    if (x == 1) {
+        cout << -1 << endl;
+    } else {
+        long y = x ^ 1;
+        cout << y << endl;
+    }
+
+    return 0;
+}
+```
+
+## 2. 音乐队列
+
+小红的播放器里一共有 n 首歌待放，歌单里第 $i$ 首歌的长度为 $a_i$ 秒。
+
+小红会按顺序播放歌单里的歌，如果当前歌放完了，会自动插放下一首，两首歌曲之间没有缓冲的时间。
+
+第 $i$ 首歌曲的等待时长为 $a_1 + … + a_{i-1}$ 秒，第一首歌曲等待时间为 0 秒。
+
+小红想知道，如果她选择 $k$ 首歌移除播放队列，那么播放队列中剩下的歌曲的等待时长之和最小能达到多少?
+
+> 输入描述
+
+- 第一行输入两个整数 $n(1≤n ≤5000;0≤k≤n)$ 表示歌单里歌曲的数量、需要移除的歌曲数量
+- 第二行输入 $n$ 个整数，表示每首歌的长度，其中 $ 1 ≤ a_i ≤ 10^9$
+
+> 输出描述
+
+- 输出一个整数，表示插放队列中剩下的歌曲的等待时长之和的最小值。
+
+> 示例 1
+
+输入：
+
+```cpp
+3 1
+1 2 3
+```
+
+输出：
+
+```cpp
+1
+```
+
+> 示例 2
+
+输入：
+
+```cpp
+3 0
+1 2 3
+```
+
+输出：
+
+```cpp
+4
+```
+
+> 代码：贪心算法
+
+- 目标转换： 最小化移除 $k$ 首歌后的总等待时间，等价于最大化移除这 k 首歌所能减少的总等待时间。
+- 计算单次移除收益： 对于原始列表中的每一首歌 $a_j$，计算如果只移除它，会使原始总等待时间减少多少。这个减少量 $R_j$ 等于 $a_j$ 原本的等待时间加上 $a_j$ 对其后面所有歌曲等待时间的贡献（即 $a_j$ 的长度乘以它后面歌曲的数量）。
+- 贪心选择： 既然要最大化总减少量，并且移除每首歌的“收益” $R_j$ 是基于原始列表计算的，可以独立看待。因此，采用贪心策略：计算所有歌曲的 $R_j$，然后选择 $R_j$ 值最大的 $k$ 首歌进行移除。
+- 计算结果：确定要移除的 $k$ 首歌的原始索引。构建一个只包含剩下 $n-k$ 首歌的新列表（保持它们的原始相对顺序）。直接计算这个新列表的总等待时间。**核心思想是贪心，优先移除那些能最大程度降低总等待时间的歌曲**。
+
+```cpp
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <unordered_set>
+using namespace std;
+
+// Class to store reduction value and original index
+struct ReductionInfo {
+    long long reduction;
+    int originalIndex; // 1-based index
+
+    ReductionInfo(long long r, int idx) : reduction(r), originalIndex(idx) {}
+};
+
+int main() {
+    int n, k;
+    cin >> n >> k;
+
+    vector<int> a(n);
+    for (int i = 0; i < n; i++) {
+        cin >> a[i];
+    }
+
+    if (k == n) {
+        cout << 0 << endl; // If all songs are removed, waiting time is 0
+        return 0;
+    }
+    if (k == 0) {
+        // Calculate original waiting time directly if k=0
+        long long totalWait = 0;
+        long long currentPrefixSum = 0;
+        for (int i = 0; i < n; i++) {
+            totalWait += currentPrefixSum;
+            currentPrefixSum += a[i];
+        }
+        cout << totalWait << endl;
+        return 0;
+    }
+
+    // Calculate prefix sums
+    vector<long long> prefixSum(n + 1, 0);
+    for (int i = 0; i < n; i++) {
+        prefixSum[i + 1] = prefixSum[i] + a[i];
+    }
+
+    // Calculate reduction for each song
+    vector<ReductionInfo> reductions;
+    for (int j = 1; j <= n; j++) {
+        // R_j = P[j-1] + (n-j) * a[j-1]
+        long long rj = prefixSum[j - 1] + (long long)(n - j) * a[j - 1];
+        reductions.emplace_back(rj, j);
+    }
+
+    // Sort reductions in descending order
+    sort(reductions.begin(), reductions.end(), [](const ReductionInfo& r1, const ReductionInfo& r2) {
+        // Sort by reduction descending. If reductions are equal, order doesn't matter much,
+        // but consistent sorting is good (e.g., by index ascending).
+        if (r2.reduction != r1.reduction) {
+            return r2.reduction < r1.reduction; // Descending reduction
+        }
+        return r1.originalIndex < r2.originalIndex; // Ascending index as tie-breaker
+    });
+
+    // Identify indices to remove
+    unordered_set<int> removedIndices;
+    for (int i = 0; i < k; i++) {
+        removedIndices.insert(reductions[i].originalIndex);
+    }
+
+    // Build the new list of songs (kept songs)
+    vector<int> keptSongs;
+    for (int i = 0; i < n; i++) {
+        if (removedIndices.find(i + 1) == removedIndices.end()) { // Check using 1-based index
+            keptSongs.push_back(a[i]);
+        }
+    }
+
+    // Calculate the total waiting time for the kept songs
+    long long finalTotalWait = 0;
+    long long currentPrefixSumNew = 0;
+    for (int songLength : keptSongs) {
+        finalTotalWait += currentPrefixSumNew;
+        currentPrefixSumNew += songLength;
+    }
+
+    cout << finalTotalWait << endl;
+
+    return 0;
+}
+```
+
+## 3. 小红的加权三色数
+
+小红得到一棵树，该树有 $n$ 个节点。每个节点具有三种颜色之一，分别为 R、G 与 B。每个节点还拥有一个正整数权值，用 $w_i$ 表示第 $i$ 个节点的权值。
+
+小红需要选择一个节点作为根节点。选定后，该根节点的颜色保持不变，不能被修改。对于其他非根节点，小红可以进行修改操作。每次修改操作的规则为：
+
+- 选择一个非根节点，将以该节点为根的子树内所有节点的颜色统一修改为目标颜色，目标颜色为根节点的初始颜色
+    在一次修改中，该操作的代价为被修改子树内所有节点权值之和。
+
+小红希望通过合理选择根节点并规划修改方案，使得最终全树所有节点均为根节点的颜色，同时使总代价最小。
+
+> 名词解释
+
+子树：对于树中的一个节点，其与所有后代节点构成的树称为该节点的子树。
+
+> 输入描述
+
+- 第一行输入一个整数 $(1 ≤ n ≤ 5*10^5)$，代表树的节点数量。
+- 第二行输入一个长度为 $n$ 的字符串，该字符串仅由字符 R、G、B 组成，其中第 $i$ 个字符表示第 $i$ 个节点的初始颜色。
+- 第三行输入 $n$ 个正整数 $w_1,w_2,...,w_n(1≤w_i≤10^9)$，表示各节点的权值。
+- 随后输入 $n-1$ 行，每行包会两个整数 $u$ 和 $v(1≤u,v≦n,u≠y)$，表示节点 $u$ 与节点 $v$ 之间存在一条边。保证给定的 $n$ 个节点构成一棵树，即任意两个节点之问存在且仅存在一条简单路径。
+
+> 输出描述
+
+输出一个整数，代表使全树所有节点顿色统一为根节点初始颜色所需的最小总代价。
+
+> 示例 1
+
+输入：
+
+```cpp
+3
+RBB
+1 2 3
+1 2
+2 3
+```
+
+输出：
+
+```cpp
+1
+```
+
+解释：
+
+- 若选择节点 2 或节点 3 作为根节点，则目标颜色为 B。
+- 以节点 2 为根时，仅需修改与其相连的非根节点（如节点 1），修改操作使节点 1 变为 B，代价为 1。
+- 同理，以节点 3 为根时，方案类似，总代价亦为 1。
+- 故最小总代价为 1。
+
+> 代码：换根 DP（reroot）
+
+- 题目要求尝试以每个节点 $r$ 为根，计算将整棵树染成 $r$ 初始颜色的最小代价，并求所有根选择中的最小代价。
+- **暴力不可行**： 对每个节点作为根都独立计算一次代价（需要 DFS 确定子树和计算代价）复杂度为 $O(N^2)$，太慢。
+- 核心技术：**换根 DP (Rerooting DP)**。 **这种技术适用于需要计算以每个节点为根时的某个树上属性的问题，能将复杂度优化到 $O(N)$**。
+    - 第一遍 DFS（向下）：任选一个节点（如 0）作为临时根。 计算每个节点的子树权重和 `subtreeSum[u]`。
+    - 计算 DP 状态 `dpDown[u][C]`：表示在以 0 为根时，假设 u 的父节点颜色已经是目标色 C，将 u 的子树完全染成颜色 C 所需的最小代价。这个计算依赖于其子节点的 `dpDown` 值和 `subtreeSum` 值。
+    - 第二遍 DFS（**向上/换根**）：计算最终 DP 状态 `finalCost[u][C]`：表示如果以 u 为真正的根，将整棵树染成目标色 C 的最小总代价。
+    - 这个计算利用 `dpDown[u][C]`（处理 u 子树部分的代价）和其父节点 p 的 `finalCost[p][C]` 以及 `dpDown` 值（推导出处理树上其他部分的代价）。
+    - 统计答案：遍历所有节点 r (0 到 N-1)。获取节点 r 的初始颜色 `initial_color[r]`。该节点作为根时的最小代价为 `finalCost[r][initial_color[r]]`。在所有 r 的这个代价中取最小值，即为最终答案。
+
+```cpp
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <climits>
+using namespace std;
+
+vector<vector<int>> adj;
+vector<char> colors; // 0-based node index
+vector<int> weights; // 0-based node index
+vector<long long> subtreeSum; // S[u]: sum of weights in subtree rooted at u
+vector<vector<long long>> dpDown; // dpDown[u][color_idx]: cost for subtree u if parent imposes target color
+vector<vector<long long>> finalCost; // finalCost[u][color_idx]: total cost if u is root and target color is color_idx
+long long totalWeightSum;
+const int R_IDX = 0;
+const int G_IDX = 1;
+const int B_IDX = 2;
+int n;
+
+// Helper to map color char to index 0, 1, 2
+int colorToIndex(char c) {
+    if (c == 'R') return R_IDX;
+    if (c == 'G') return G_IDX;
+    return B_IDX; // 'B'
+}
+
+// DFS1: Calculate subtree sums, starting from node 0
+void dfs_sum(int u, int p) {
+    subtreeSum[u] = weights[u];
+    for (int v : adj[u]) {
+        if (v != p) {
+            dfs_sum(v, u);
+            subtreeSum[u] += subtreeSum[v];
+        }
+    }
+}
+
+void dfs_dp_down(int u, int p) {
+    for (int v : adj[u]) {
+        if (v != p) {
+            dfs_dp_down(v, u); // Calculate for child first
+            int vColorIdx = colorToIndex(colors[v]);
+            long long sv = subtreeSum[v]; // Subtree sum of child v
+
+            for (int targetColorIdx = 0; targetColorIdx < 3; targetColorIdx++) {
+                if (vColorIdx == targetColorIdx) {
+                    // If child color matches target, add child's dpDown cost for that target
+                    dpDown[u][targetColorIdx] += dpDown[v][targetColorIdx];
+                } else {
+                    // If child color differs, must modify child's subtree, cost is S[v]
+                    dpDown[u][targetColorIdx] += sv;
+                }
+            }
+        }
+    }
+}
+
+// Helper to get contribution of child x's subtree when target is C, from parent's view
+long long getContribution(int x, int targetColorIdx) {
+    int xColorIdx = colorToIndex(colors[x]);
+    if (xColorIdx == targetColorIdx) {
+        // If x matches target, contribution is the cost calculated below x for that target
+        return dpDown[x][targetColorIdx];
+    } else {
+        // If x doesn't match target, the whole subtree x must be modified, cost is S[x]
+        return subtreeSum[x];
+    }
+}
+
+// DFS3: Rerooting to calculate finalCost[u][C] = cost if u is root and target is C
+void dfs_reroot(int u, int p) {
+    for (int v : adj[u]) {
+        if (v != p) {
+            // Calculate cost contribution from the 'parent' branch (everything except v's subtree)
+            for (int targetColorIdx = 0; targetColorIdx < 3; targetColorIdx++) {
+                long long costParentBranch; // Cost of the tree excluding v's subtree, assuming targetColorIdx
+
+                long long contributionFromV = getContribution(v, targetColorIdx);
+                // Weight sum of the parent branch (everything except v's subtree)
+                long long sumExcludingVSubtree = totalWeightSum - subtreeSum[v];
+
+                int uColorIdx = colorToIndex(colors[u]);
+                if (uColorIdx == targetColorIdx) {
+                    // If u matches target, the cost from parent branch is its calculated cost,
+                    // which is the total cost from u's perspective minus v's contribution.
+                    costParentBranch = finalCost[u][targetColorIdx] - contributionFromV;
+                } else {
+                    // If u doesn't match target, from v's perspective, u must be modified.
+                    // The cost incurred by this modification is the sum of weights in that branch.
+                    costParentBranch = sumExcludingVSubtree;
+                }
+                // Total cost for v = (cost below v) + (cost from parent branch)
+                finalCost[v][targetColorIdx] = dpDown[v][targetColorIdx] + costParentBranch;
+            }
+            // Recurse into child v
+            dfs_reroot(v, u);
+        }
+    }
+}
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+
+    cin >> n;
+
+    colors.resize(n);
+    for (int i = 0; i < n; ++i) {
+        cin >> colors[i];
+    }
+
+    weights.resize(n);
+    totalWeightSum = 0;
+    for (int i = 0; i < n; ++i) {
+        cin >> weights[i];
+        totalWeightSum += weights[i];
+    }
+
+    adj.resize(n);
+    for (int i = 0; i < n - 1; ++i) {
+        int u, v;
+        cin >> u >> v;
+        --u; --v; // Convert to 0-based
+        adj[u].push_back(v);
+        adj[v].push_back(u);
+    }
+
+    subtreeSum.resize(n);
+    dpDown.assign(n, vector<long long>(3, 0));
+    finalCost.assign(n, vector<long long>(3, 0));
+
+    // Step 1: Calculate subtree sums (rooted arbitrarily at 0)
+    dfs_sum(0, -1);
+
+    // Step 2: Calculate dpDown (cost from below, relative to root 0)
+    dfs_dp_down(0, -1);
+
+    // Step 3: Rerooting DP
+    // Initialize root's finalCost (cost if 0 is root = cost below 0)
+    for (int c = 0; c < 3; ++c) {
+        finalCost[0][c] = dpDown[0][c];
+    }
+    // Start rerooting DFS from root 0 to calculate finalCost for all nodes
+    dfs_reroot(0, -1);
+
+    // Step 4: Find minimum cost
+    long long minTotalCost = LLONG_MAX;
+    for (int r = 0; r < n; ++r) {
+        int targetColorIdx = colorToIndex(colors[r]); // Target color is initial color of root r
+        minTotalCost = min(minTotalCost, finalCost[r][targetColorIdx]);
+    }
+
+    cout << minTotalCost << endl;
+
+    return 0;
+}
+```
+

@@ -28,7 +28,7 @@ export default defineConfig({
   site: 'https://astro-pure.js.org',
   // Deploy to a sub path; See https://astro-pure.js.org/docs/setup/deployment#platform-with-base-path
   // base: '/astro-pure/',
-  trailingSlash: 'never',
+  trailingSlash: 'ignore',
 
   // Adapter
   // https://docs.astro.build/en/guides/deploy/
@@ -74,7 +74,10 @@ export default defineConfig({
   markdown: {
     remarkPlugins: [remarkMath],
     rehypePlugins: [
-      [rehypeKatex, {}],
+      [rehypeKatex, {
+        strict: false,
+        trust: true
+      }],
       rehypeHeadingIds,
       [
         rehypeAutolinkHeadings,

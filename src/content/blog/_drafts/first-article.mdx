@@ -1,0 +1,37 @@
+---
+title: 'First Article' # (Required, max 60)
+description: 'I like writing articles.' # (Required, 10 to 320)
+publishDate: '2024-11-30 00:08:00' # (Required, Date)
+updatedDate: '2025-07-10'          # (Optional)
+tags:
+  - Markdown # (Also can write format like next line)
+# heroImage: { src: './thumbnail.jpg', alt: 'an image targetting my article', color: '#B4C6DA' }  # thumbnail.jpg should be in the same folder as the article
+# heroImage: { src: 'https://img.tukuppt.com/ad_preview/00/15/09/5e715a320b68e.jpg!/fw/980', inferSize: true }  # use remote image
+language: 'English' # (String as you like)
+comment: true # (set false will disable comment, even if you've enabled it in site-config)
+draft: true # (set true will only show in development)
+---
+
+import { GithubCard } from 'astro-pure/advanced';
+
+```cpp
+test
+test
+```
+
+```log title="hello.log"
+test
+test
+```
+
+<GithubCard repo="cworld1/astro-theme-pure"/>
+
+> Test
+
+Test `inline code`
+
+| Header 1 | Header 2 | Header 3 |
+| -------- | -------- | -------- |
+| Row 1    | Data 1   | Data 2   |
+| Row 2    | Data 1   | Data 2   |
+| Row 3    | Data 1   | Data 2   |

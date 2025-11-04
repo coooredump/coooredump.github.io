@@ -1,0 +1,435 @@
+---
+title: 'GDB: The GNU Project Debugger'
+description: GDB 官方手册
+publishDate: 2025-04-13
+tags: [系统与体系结构]
+heroImage: { src: ../_img/202504140009551.jpeg }
+language: Chinese
+comment: true
+draft: false
+---
+
+官方文档：[GDB: The GNU Project Debugger](https://sourceware.org/gdb/documentation/)
+
+- 官方提供的 GDB Document 所展示的 gdb 调试全过程示例如下链接【**已阅**】：https://sourceware.org/gdb/current/onlinedocs/gdb/Sample-Session.html#Sample-Session
+  -  `gdb m4`
+  -  `set width 70`
+  -  `break m4_changequote` / `b m4_changequote`
+  -  `run` / `r`
+  -  `n` / `next`
+  -  `s` / `step`
+  -  `backtrace` / `bt`
+  -  `p lquote` / `print lquote`
+  -  `list` / `l`
+  -  `p len_lquote=strlen(lquote)`
+  -  `c` / `continue`
+  -  `ctrl-d` / `quit`
+
+## 1. `gdb` 启动 gdb
+
+```shell
+# 直接启动 gdb
+$ gdb
+# 启动 gdb 的同时加载一个要调试的 [可执行文件]
+# 该 test 文件在编译的过程中必须要加 -g 选项, 把调试信息加到可执行文件中: gcc -g test.c -o test
+$ gdb test
+```
+
+## 2. `quit`/`q` 退出 gdb
+
+```shell
+$ quit
+$ q
+```
+
+## 3. `file` 命令加载程序
+
+```shell
+$ file [可执行文件]
+
+(gdb) file test
+Reading symbols from test...
+```
+
+## 4. `list`/`l` 命令显示源代码
+
+```
+list` 命令可以列出可执行文件的源代码的一部分，简写为 `l
+```
+
+- 该命令既可不带参数：`list` 命令将显示 10 行代码，第一次从首行开始显示，第二次从上次显示的末行的下一行开始显示，以此类推
+- 也可带 1 个参数：`list n` 命令显示的是第 n 行的前 5 行和后 4 行代码
+- 或者带 2 个参数：`list n1, n2` 命令显示的是 n1—n2 行之间的源代码内容
+- 还可以显示某函数附近的源代码内容：`list funcname`
+
+```shell
+(gdb) list
+1       #include <iostream>
+2       #include <fstream>
+3       #include <vector>
+4
+5       using namespace std;
+6
+7       int main()
+8       {
+9         ofstream outfile;
+10        outfile.open("./results/MD_trace_results.txt", ios::out | ios::app);
+(gdb) l
+11        if (!outfile.is_open())
+12        {
+13          cout << "failed" << endl;
+14          exit(1);
+15        }
+16
+17        cout << "succeeded" << endl;
+18
+19        return 1;
+20      }
+(gdb) l
+Line number 21 out of range; open_file.cpp has 20 lines.
+```
+
+## 5. `run`/`r` 命令运行程序
+
+使用 `run` / `r` 可以在 gdb 中运行调试中的程序，**该命令可以跟一个或多个参数，作为运行程序的命令行参数**。
+
+```shell
+(gdb) run 1 2 3
+`/home/wyk/straid/code/open_file' has changed; re-reading symbols.
+Starting program: /home/wyk/straid/code/open_file 1 2 3
+argc = 4
+argv[0]: /home/wyk/straid/code/open_file
+argv[1]: 1
+argv[2]: 2
+argv[3]: 3
+succeeded
+[Inferior 1 (process 145429) exited with code 01]
+```
+
+使用 `show args` 命令显示传给该程序的参数列表：
+
+```shell
+(gdb) show args
+Argument list to give program being debugged when it is started is "1 2 3".
+```
+
+如果重新运行 `run` 则会将上次的命令行重新参数传给该程序。
+
+如果要改变传递给程序的参数，可使用 `set args`：
+
+```shell
+(gdb) set args 4 5 6
+(gdb) run
+Starting program: /home/wyk/straid/code/open_file 4 5 6
+argc = 4
+argv[0]: /home/wyk/straid/code/open_file
+argv[1]: 4
+argv[2]: 5
+argv[3]: 6
+succeeded
+[Inferior 1 (process 145554) exited with code 01]
+```
+
+## 6. `break`/`b` 命令设置断点
+
+程序执行到断点时将被挂起，有以下几种方式设置断点：
+
+> ```
+> break` 命令也有简写形式 `b
+> ```
+
+(1) 根据行号设置断点 `break <linenum>`
+
+```shell
+(gdb) break 10
+Breakpoint 1 at 0x5555555552d5: file open_file.cpp, line 10.
+```
+
+设置好断点后启动程序，会停在断点位置：
+
+```shell
+(gdb) run
+Starting program: /home/wyk/straid/code/open_file 4 5 6
+
+Breakpoint 1, main (argc=4, argv=0x7fffffffe178) at open_file.cpp:10
+10        cout << "argc = " << argc << endl;
+```
+
+(2) 根据函数名设置断点 `break <funcname>`
+
+```shell
+(gdb) break main
+Breakpoint 2 at 0x5555555552a9: file open_file.cpp, line 8.
+```
+
+(3) 执行**非当前源文件**的某行或某函数时停止执行（为非当前源文件设置断点）
+
+```shell
+(gdb) break filename:linenum
+# or
+(gdb) break filename:funcname
+```
+
+(4) 根据条件停止执行程序
+
+```shell
+(gdb) break linenum if expr
+# or
+(gdb) break funcname if expr
+```
+
+⭐清除断点：
+
+- `clear <source-line>`：清除**源文件**某一行的所有断点
+- `delete <breakpoint-id>`：删除 `info b` 中对应 ID 的断点
+
+```shell
+(gdb) info b
+Num     Type           Disp Enb Address            What
+1       breakpoint     keep y   0x00005555555553ad in main(int, char**) at open_file.cpp:17
+2       breakpoint     keep y   0x00005555555553e3 in main(int, char**) at open_file.cpp:19
+3       breakpoint     keep y   0x00005555555552d5 in main(int, char**) at open_file.cpp:10
+(gdb) clear 17  # 清除源文件 line 17 位置的断点
+(gdb) info b
+Num     Type           Disp Enb Address            What
+2       breakpoint     keep y   0x00005555555553e3 in main(int, char**) at open_file.cpp:19
+3       breakpoint     keep y   0x00005555555552d5 in main(int, char**) at open_file.cpp:10
+(gdb) delete 2  # 清除 Num=2 的断点
+(gdb) info b
+Num     Type           Disp Enb Address            What
+3       breakpoint     keep y   0x00005555555552d5 in main(int, char**) at open_file.cpp:10
+```
+
+## 7. 在不退出/中断 gdb 的情况下使用 shell 命令：`!<command>` 或 `shell <command>`
+
+```shell
+# don't work
+(gdb) echo $PATH
+# works
+(gdb) shell echo $PATH
+/home/wyk/.vscode-server/bin/8fa188b2b301d36553cbc9ce1b0a146ccb93351f/bin/remote-cli:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+(gdb) !ls -al $PWD
+total 108
+drwxrwx--- 8 wyk  wyk   4096 Dec 17 17:36 .
+drwxrwxr-x 6 wyk  wyk   4096 Dec  7 08:57 ..
+drwxr-xr-x 2 root root  4096 Dec  7 12:43 bin
+drwxrwxr-x 7 wyk  wyk   4096 Dec  7 12:43 include
+-rwxrwxrwx 1 wyk  wyk    278 Nov 22 03:04 install_depends.sh
+-rwxrwxr-x 1 wyk  wyk   3589 Dec  7 09:12 Makefile
+drwxr-xr-x 2 root root  4096 Dec  7 12:43 obj
+-rwxrwxr-x 1 wyk  wyk  41016 Dec 17 17:36 open_file
+-rw-rw-r-- 1 wyk  wyk    535 Dec 17 17:36 open_file.cpp
+-rw-rw-r-- 1 wyk  wyk   5964 Nov 22 03:04 README.md
+drwxrwxr-x 2 wyk  wyk   4096 Dec  7 10:38 results
+-rwxrwxrwx 1 wyk  wyk    880 Dec 12 15:08 run_bench.sh
+-rwxrwxrwx 1 wyk  wyk    486 Dec  7 10:37 run_tracemd.sh
+-rwxrwxrwx 1 wyk  wyk    397 Dec  7 09:27 run_tracest.sh
+drwxrwxr-x 2 wyk  wyk   4096 Nov 22 03:04 src
+drwxrwxr-x 2 wyk  wyk   4096 Nov 22 03:04 Traces
+```
+
+因为在 GDB 中不常使用 `shell` 命令，所以需要 `shell` 和 `!` 的限制，而经常在开发环境中使用 `make` 命令，所以无需使用以上符号即可调用 `make` 命令。
+
+```shell
+# make 命令可直接调用
+(gdb) make -j4
+
+# sudo 命令：还是得使用 ! 或者 shell
+(gdb) !sudo make -j10
+[sudo] password for wyk: 
+g++ -I. -I./include -I./include/Bitmap -I./include/concurrentqueue -I./src -Wp,-MT,obj/define.o -Wp,-MMD,obj/define.o.d -g -std=c++2a -Wall -Wno-unused-variable -Wno-unused-but-set-variable -Wno-sign-compare -Wno-comment -O3  -c -o obj/define.o ./include/define.cc
+g++ -I. -I./include -I./include/Bitmap -I./include/concurrentqueue -I./src -Wp,-MT,obj/ecEncoder.o -Wp,-MMD,obj/ecEncoder.o.d -g -std=c++2a -Wall -Wno-unused-variable -Wno-unused-but-set-variable -Wno-sign-compare -Wno-comment -O3  -c -o obj/ecEncoder.o ./include/ecEncoder.cc
+g++ -I. -I./include -I./include/Bitmap -I./include/concurrentqueue -I./src -Wp,-MT,obj/metadata.o -Wp,-MMD,obj/metadata.o.d -g -std=c++2a -Wall -Wno-unused-variable -Wno-unused-but-set-variable -Wno-sign-compare -Wno-comment -O3  -c -o obj/metadata.o ./include/metadata.cc
+...
+```
+
+@ 管道命令 `|`, 可用 `pipe` 将 gdb 中的命令与 shell 命令结合使用 [ `|` 原本是用于 shell 与 shell 之间的管道命令 ]
+
+```shell
+# 不生效
+(gdb) show args | wc -l
+Argument list to give program being debugged when it is started is "1 2 3".
+# 使用 pipe 即可打通 gdb 与 shell 之间的传输
+(gdb) pipe show args | wc -l
+1
+(gdb) pipe p argv | wc -l
+1
+# | 原本用于 shell 与 shell 之间的命令传输
+(gdb) !ls -al | wc -l
+17
+```
+
+## 8. `s` 命令 == step「单步进入」
+
+```shell
+(gdb) help s
+Step program until it reaches a different source line.
+Usage: step [N]
+Argument N means step N times (or till program stops for another reason).
+```
+
+## 9. `finish` 命令「单步跳出」
+
+```shell
+(gdb) help finish
+Execute until selected stack frame returns.
+Usage: finish
+Upon return, the value returned is printed and put in the value history.
+```
+
+## 10. `n` 命令 == next「单步跳过」
+
+```shell
+(gdb) help n
+Step program, proceeding through subroutine calls.
+Usage: next [N]
+Unlike "step", if the current source line calls a subroutine,
+this command does not enter the subroutine, but instead steps over
+the call, in effect treating it as a single source line.
+```
+
+## 11. `c` 命令 == continue「跳到下一个断点」
+
+```shell
+(gdb) help c
+Continue program being debugged, after signal or breakpoint.
+Usage: continue [N]
+If proceeding from breakpoint, a number N may be used as an argument,
+which means to set the ignore count of that breakpoint to N - 1 (so that
+the breakpoint won't break until the Nth time it is reached).
+
+If non-stop mode is enabled, continue only the current thread,
+otherwise all the threads in the program are continued.  To 
+continue all stopped threads in non-stop mode, use the -a option.
+Specifying -a and an ignore count simultaneously is an error.
+```
+
+## 12. `return n` 命令直接跳过当前函数后面的语句并直接返回 n，该 n 值是自定义的返回值
+
+```shell
+(gdb) return 6
+Make main(int, char**) return now? (y or n) y
+#0  __libc_start_main (main=0x5555555552a9 <main(int, char**)>, argc=4, argv=0x7fffffffe178, 
+     init=<optimized out>, fini=<optimized out>, rtld_fini=<optimized out>, stack_end=0x7fffffffe168)
+     at ../csu/libc-start.c:342
+342     ../csu/libc-start.c: No such file or directory.
+(gdb) n
+[Inferior 1 (process 148790) exited with code 06]
+(gdb) n
+The program is not being run.
+```
+
+## 13. `print var`/`p var` 命令查看 var 值
+
+```shell
+(gdb) print argv
+$1 = (char **) 0x7fffffffe178
+(gdb) print argc
+$2 = 4
+(gdb) print *argv[0]
+$3 = 47 '/'
+(gdb) print argv[0]
+$4 = 0x7fffffffe42e "/home/wyk/straid/code/open_file"
+(gdb) print argv[1]
+$5 = 0x7fffffffe44e "1"
+(gdb) print argv[2]
+$6 = 0x7fffffffe450 "2"
+(gdb) print argv[3]
+$7 = 0x7fffffffe452 "3"
+(gdb) print argv[4]
+$8 = 0x0
+```
+
+## 14. `backtrace` / `bt` 与 `frame`、`up`、`down`、`info` 搭配食用：查看函数调用栈的最佳命令｜快速定位 bug 位置
+
+> 立瀚教学 get 到 backtrace，转载链接：[gdb调试之函数调用栈——backtrace](https://doc.embedfire.com/linux/imx6/base/zh/latest/linux_debug/backtrace.html)
+>
+> 更基础的 gdb 内容：[GDB调试利器](https://doc.embedfire.com/linux/imx6/base/zh/latest/linux_debug/gdb_use.html)
+
+- `bt` ：bt是 `backtrace` 指令的缩写，显示所有的函数调用栈的信息，栈中的每个函数都被分配了一个编号，最近被调用的函数在 0 号帧中（栈顶），并且每个帧占用一行。
+- `bt n` ：显示函数调用栈从栈顶算起的 n 帧信息（n 表示一个正整数）。
+- `bt -n` ：显示函数调用栈从栈底算起的 n 帧信息。
+- `bt full` ：显示栈中所有信息如：函数参数，本地变量等。
+- `bt full n` ：显示函数调用栈从栈顶算起的 n 帧的所有信息。
+- `bt full -n` ：显示函数调用栈从栈底算起的 n 帧的所有信息。
+
+上面的 `bt` 指令主要是查看栈的信息，而每一帧都会有详细的信息，这些函数调用信息帧包括：调用函数的地方，函数的参数等。如果想查看栈中某一帧的信息，首先要做的是切换当前栈。这时候需用用到 `frame` 指令（缩写形式为 `f`）。
+
+- `f n` / `frame n`: 它的功能是切换到编号为 n 的栈帧（n 表示一个正整数），并显示相关信息。
+
+除了使用 frame 指令切换栈帧外，还可以使用 up 和 down 指令。
+
+- `down n` ：表示往栈顶方向下移 n 层（n 表示一个正整数，默认值为 1）。
+- `up n` ：表示往栈底方向上移 n 层。
+
+info 指令是一个很强大的指令，使用它可以查看各种变量的值，如果我们希望看到详细的函数调用信息帧的信息，如：函数地址、调用函数的地址、被调用函数的地址、当前函数由哪种编程语言编写、函数参数地址及形参值、局部变量的地址、当前桢中存储的寄存器等，可以使用以下指令：
+
+- `info frame` ： 指令的缩写形式为 `i f` ，查看函数调用帧的所有信息。
+- `info args` ：查看函数变量的值。
+- `info locals` ：查看本地变量的信息。
+
+## 15. 了解一下 GDB 的语法规则|注意事项
+
+- 使用 gdb 调试的前提是在编译命令中添加 `-g` 参数，因为有些编译器是无法同时处理 `-g` 和 `-O` 选项，所以无法调试带有调试信息 (-g) 的优化 (-O) 可执行文件！
+- gdb 是单行输入，由 `<命令>` 跟着 `<参数>`，取决于命令，比如 `step 5` 表示连续执行 5 次 `step`
+- 对于缩写无歧义的 gdb 命令，通常可以截断使用；如果有些以相同字母开头可能造成歧义的命令，可以使用 `help` 命令来判别该缩写命令是属于哪一条具体的命令，比如 `help s`
+- 直接按下「回车」会重复上一步命令，但是对于某些可能带来麻烦的命令不会生效，比如 `run`；对于 `list` 和 `x` 命令，按下回车会构造新的参数来重复命令，这样方便扫描资源和内存（连续按下 `list` 会往下不断展示 10 行代码） ，`ctrl+o` 同 `Enter`
+- `#` 表示注释，同 shell 脚本
+- gdb 使用 `Tab` 按钮也可「补全命令」
+
+```shell
+# 盘点一些 gdb 系统命令 [Useful]
+(gdb) help
+(gdb) help <command>
+(gdb) complete <alphabet>   # 列出以 alphabet 开头的所有命令, 比如 complete sh: sharedlibrary shell show
+(gdb) show
+(gdb) info
+(gdb) set
+# Here are several miscellaneous show subcommands, all of which are exceptional in lacking corresponding set commands:
+(gdb) show version
+(gdb) show copying
+(gdb) info copying
+(gdb) show warranty
+(gdb) info warranty
+(gdb) show configuration
+```
+
+⭐更多内容（未完待续）：
+
+- `inferior 可以同时调试多个程序`
+  - `info inferiors`
+  - `inferior <infno>`
+  - `add-inferior`
+  - `clone-inferior`
+  - `remove-inferiors <infno>`
+  - `kill inferiors <infno>`
+  - ...
+- `threads 可以调试多线程`
+  - `info threads`
+  - ...
+- `checkpoint 可以保留快照，搭配 restart <checkpoint-id> 回到快照点`，当你接近错误点时，可以保留快照，如果因为走得太远导致错过关键语句，无需重新启动程序，直接跳回上一个快照点 checkpoint 即可
+  - `checkpoint`: 在此处留下快照点
+  - `info checkpoints`: 查看所有快照点信息
+  - `restart <checkpoint-id>`: 回到指定快照点
+  - `delete checkpoint <checkpoint-id>`: 删除指定快照点
+  - ...
+- watchpoint: 当观察的表达式变化时，立刻停下
+- catchpoint: 当某个事件触发时，立刻停下
+- breakpoint: 断点——毋庸置疑
+  - `b <linenum>`
+  - `b <funcname>`
+  - `info breakpoints`
+  - `save breakpoints <filename>`
+  - `disable breakpoints`
+  - `enable breakpoints`
+  - `clear <source-line>`：清除**源文件**某一行的所有断点
+  - `delete <breakpoint-id>`：删除 `info b` 中对应 ID 的断点
+- step
+  - step 是单步程序源代码
+  - stepi 是单步机器指令
+- next
+  - next 是单步程序源代码
+  - nexti 是单步机器指令
+- finish
+- until
+- ...

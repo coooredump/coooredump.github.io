@@ -1,0 +1,596 @@
+---
+title: A Study of Linux File System Evolution
+description: 为了使不同的文件系统共存， Linux 内核在用户层与具体文件 系统之前增加了虚拟文件系统中间层，它对复杂的系统进行抽象化，对用户提供了统一的文件操作接口。无论是 ext2/3/4、FAT32、NTFS 存储的文件，还是 /proc、/sys 提供 的信息还是硬件设备，无论内容是在本地还是网络上，都使用一样的 open、read、write 来访问，使得 “一切皆文件” 的理念被实现，这也正是软件中间层的魅力。
+publishDate: 2024-12-30
+tags: [系统与体系结构]
+heroImage: { src: ../_img/202501222353334.jpeg }
+language: Chinese
+comment: true
+draft: false
+---
+
+## Virtual File System (VFS)
+
+![VFS](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202412271620668.png)上图解构如下：
+
+- 应用层指用户编写的程序，如我们的 `hello.c`
+- GNU C 库（*glibc*）即 C 语言标准库，例如在编译器章节介绍的 *libc.so.6* 文件，它 包含了 `printf`、`malloc`，以及本章使用的 `fopen`、`fread`、`fwrite` 等文件操作函数
+- 用户程序和 **glibc** 库都是属于用户空间的，本质都是用户程序
+- 应用层的程序和 glibc 可能会调用到 “系统调用层（SCI）” 的函数，这些函数 是 Linux 内核对外提供的函数接口，用户通过这些函数向系统申请操作。例如，C 库 的 `printf` 函数使用了系统的 `vsprintf` 和 `write` 函数，C 库的 `fopen`、`fread`、`fwrite` 分别 调用了系统的 `open`、`read`、`write` 函数，具体可以阅读 glibc 的源码了解。
+- 由于文件系统种类非常多，跟文件操作相关的 `open`、`read`、`write` 等函数经过虚 拟文件系统层，再访问具体的文件系统。
+
+总的来说，为了使不同的文件系统共存， Linux 内核在用户层与具体文件 系统之前增加了虚拟文件系统中间层，它对复杂的系统进行抽象化，对用户提供了统一的文件操作接口。无论是 **ext2/3/4**、**FAT32**、**NTFS** 存储的文件，还是 /proc、/sys 提供 的信息还是硬件设备，无论内容是在本地还是网络上，都使用一样的 open、read、write 来访问，使得 “一切皆文件” 的理念被实现，这也正是软件中间层的魅力。
+
+![详细讲解，Linux内核——文件系统（建议收藏）](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202412292343673.jpg)
+
+## Linux System Calls
+
+从上图可了解到，系统调用（System Call）是操作系统提供给用 户程序调用的一组“特殊”函数接口 API，文件操作就是其中一种类型。实际 上，Linux 提供的系统调用包含以下内容：
+
+- 进程控制：如 fork、clone、exit 、setpriority 等创建、中止、设置进程优先级的操作。
+- 文件系统控制：如 open、read、write 等对文件的打开、读取、写入操作。
+- 系统控制：如 reboot、stime、init_module 等重启、调整系统时间、初始化模块的系统操作。
+- 内存管理：如 mlock、mremap 等内存页上锁重、映射虚拟内存操作。
+- 网络管理：如 sethostname、gethostname 设置或获取本主机名操作。
+- socket 控制：如 socket、bind、send 等进行 TCP、UDP 的网络通讯操作。
+- 用户管理：如 setuid、getuid 等设置或获取用户 ID 的操作。
+- 进程间通信：包含信号量、管道、共享内存等操作。
+
+从逻辑上来说，系统调用可被看成是一个 Linux 内核与用户空间程序交互的中间人，它把用户进程的请求传达给内核，待内核把请求处理完毕后再将处理结果送回给用户空间。它的存在就是为了对用户空间与内核空间进行隔离，要求用户通过给定的方式访问系统资源，从 而达到保护系统的目的。
+
+也就是说，我们心心念念的 Linux 应用程序与硬件驱动程序之间，就是各种各样的系统调用，所以无论出于何种目的，系统调用是学习 Linux 开发绕不开的话题。
+
+接下来通过「**文件操作**」的两个实验，来演示使用「**C 标准库**」与「**系统调用**」方式的差异。
+
+## File Ops｜C Standard Lib
+
+本小节讲解使用通用的 C 标准库接口访问文件，标准库实际是对系统调用再次进行了封装。使用 C 标准库编写的代码，能方便地在不同的系统上移植。
+
+例如 Windows 系统打开文件操作的系统 API 为 `OpenFile`，Linux 则为 `open`，C 标准库都把它们封装为 `fopen`，Windows 下的 C 库会通过 fopen 调用 OpenFile 函数实现操作，而 Linux 下则通过 glibc 调用 open 打开文件。用户代码如果使用 fopen，那么只要根据不同的系统重新编译程序即可，而不需要修改对应的代码（代码可移植性）。
+
+在开发时，遇到不熟悉的库函数或系统调用，要善用 `man` 手册，而不要老是从网上查找。C 标准库提供的常用文件操作简介如下：
+
+### 1. fopen()
+
+```c
+#include <stdio.h>
+FILE *fopen(const char *pathname, const char *mode);
+```
+
+- `pathname` 参数用于指定要打开或创建的文件名。
+- `mode` 参数用于指定文件的打开方式，注意该参数是一个字符串，输入时需要带双引号：
+    - “r”：以只读方式打开，文件指针位于文件的开头。
+    - “r+”：以读和写的方式打开，文件指针位于文件的开头。
+    - “w”：以写的方式打开，不管原文件是否有内容都把原内容清空掉，文件指针位于文件的开头。
+    - “w+”： 同上，不过当文件不存在时，前面的“w”模式会返回错误，而此处的“w+”则会创建新文件。
+    - “a”：以追加内容的方式打开，若文件不存在会创建新文件，文件指针位于文件的末尾。与“w+”的区别是它不会清空原文件的内容而是追加。
+    - “a+”：以读和追加的方式打开，其它同上。
+
+fopen 的返回值是 `FILE` 类型的文件文件流，当它的值不为 NULL 时表示正常，后续的 fread、fwrite 等函数可通过文件流访问对应的文件。
+
+### 2. fread()
+
+```c
+#include <stdio.h>
+size_t fread(void *ptr, size_t size, size_t count, FILE *stream);
+
+// usage
+char buffer[1024] = {0};
+fread(buffer, sizeof(char), sizeof(buffer), p);
+```
+
+stream 是使用 `fopen` 打开的文件流，`fread` 通过它指定要访问的文件，它从该文件中读取 count 项数据，每项的大小为 size，读取到的数据会被存储在 ptr 指向的数组中。fread的返回值为成功读取的项数（项的单位为 size）。
+
+### 3. fwrite()
+
+```c
+#include <stdio.h>
+size_t fwrite(void *ptr, size_t size, size_t count, FILE *stream);
+```
+
+它的操作与 `fread` 相反，把 ptr 数组中的内容写入到 stream 文件流，写入的项数为 count，每项大小为 size，返回值为成功写入的项数（项的单位为 size）。
+
+### 4. fclose()
+
+`fclose` 库函数用于关闭指定的文件流，关闭时它会把尚未写到文件的内容都写出。因为标准 库会对数据进行缓冲，所以需要使用 fclose 来确保数据被写出。
+
+```c
+#include <unistd.h>
+int close(int fd);
+```
+
+### 5. fflush()
+
+`fflush` 函数用于把尚未写到文件的内容立即写出。常用于确保前面操作的数据被写 入到磁盘上。`fclose` 函数本身也包含了 fflush 的操作。
+
+```c
+#include <stdio.h>
+int fflush(FILE *stream);
+```
+
+### 6. fseek()
+
+`fseek` 函数用于设置下一次读写函数操作的位置。
+
+```c
+#include <stdio.h>
+int fseek(FILE *stream, long offset, int whence);
+```
+
+其中的 offset 参数用于指定位置，whence 参数则定义了 offset 的意义，whence 的可取值如下：
+
+- `SEEK_SET`：offset 是一个绝对位置。
+- `SEEK_END`：offset 是以文件尾为参考点的相对位置。
+- `SEEK_CUR`：offset 是以当前位置为参考点的相对位置。
+
+### 7. Usage
+
+```c
+#include <stdio.h>
+#include <string.h>
+
+//要写入的字符串
+const char buf[] = "filesystem_test:Hello World!\n";
+//文件描述符
+FILE *fp;
+char str[100];
+
+int main(void)
+{
+   //创建一个文件
+   fp = fopen("filesystem_test.txt", "w+");
+   //正常返回文件指针
+   //异常返回NULL
+   if(NULL == fp){
+      printf("Fail to Open File\n");
+      return 0;
+   }
+   //将buf的内容写入文件
+   //每次写入1个字节，总长度由strlen给出
+   fwrite(buf, 1, strlen(buf), fp);
+
+   //写入Embedfire
+   //每次写入1个字节，总长度由strlen给出
+   fwrite("Embedfire\n", 1, strlen("Embedfire\n"),fp);
+
+   //把缓冲区的数据立即写入文件
+   fflush(fp);
+
+   //此时的文件位置指针位于文件的结尾处，使用fseek函数使文件指针回到文件头
+   fseek(fp, 0, SEEK_SET);
+
+   //从文件中读取内容到str中
+   //每次读取100个字节，读取1次
+   fread(str, 100, 1, fp);
+
+   printf("File content:\n%s \n", str);
+
+   fclose(fp);
+
+   return 0;
+}
+```
+
+## File Ops｜System Calls
+
+Linux 提供的文件操作系统调用常用的有 `open`、`write`、`read`、`lseek`、`close` 等。
+
+### 1. open()
+
+```c
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+int open(const char *pathname, int flags);
+int open(const char *pathname, int flags, mode_t mode);
+
+// usage-1
+fd = ::open(filename, O_RDWR | O_DIRECT | O_CREAT, 0666);
+// usage-2
+#include <fcntl.h>
+...
+int fd;
+mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+char *filename = "/tmp/file";
+...
+fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, mode);
+...
+```
+
+Linux 使用 `open` 函数来打开文件，并返回该文件对应的文件描述符。函数参数的具体说明如下：
+
+- `pathname`：要打开或创建的文件名；
+- `flag`：指定文件的打开方式，具体有以下参数，见下表 flag 参数值。
+
+| 标志位   | 含义                                                         |
+| -------- | ------------------------------------------------------------ |
+| O_RDONLY | 以只读的方式打开文件，该参数与 O_WRONLY 和 O_RDWR 只能三选一 |
+| O_WRONLY | 以只写的方式打开文件                                         |
+| O_RDWR   | 以读写的方式打开文件                                         |
+| O_CREAT  | 创建一个新文件                                               |
+| O_APPEND | 将数据写入到当前文件的结尾处                                 |
+| O_TRUNC  | 如果pathname文件存在，则清除文件内容                         |
+
+除此之外，还有 O_DIRECT 之类的，可以查 man 手册：
+
+![image-20241229224331602](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202412292243760.png)
+
+C 库函数 `fopen` 的 mode 参数与系统调用 `open` 的 flags 参数有如下表中的等价关系。
+
+| fopen 的 mode 参数 | open 的 flags 参数              |
+| ------------------ | ------------------------------- |
+| r                  | O_RDONLY                        |
+| w                  | O_WRONLY \| O_CREAT \| O_TRUNC  |
+| a                  | O_WRONLY \| O_CREAT \| O_APPEND |
+| r+                 | O_RDWR                          |
+| w+                 | O_RDWR \| O_CREAT \| O_TRUNC    |
+| a+                 | O_RDWR \| O_CREAT \| O_APPEND   |
+
+⚠️ `mode`：当 `open` 函数的 flag 值设置为 ***O_CREAT*** 时，必须使用 mode 参数来设置文件 与用户相关的权限。mode 可用的权限如下表所示，表中各个参数可使用 "|" 来组合；或者直接用数字表示更快，比如 `0666`。
+
+| \          | 标志位  | 含义                                     |
+| ---------- | ------- | ---------------------------------------- |
+| 当前用户   | S_IRUSR | 用户拥有读权限                           |
+| \          | S_IWUSR | 用户拥有写权限                           |
+| \          | S_IXUSR | 用户拥有执行权限                         |
+| \          | S_IRWXU | 用户拥有读、写、执行权限                 |
+| 当前用户组 | S_IRGRP | 当前用户组的其他用户拥有读权限           |
+| \          | S_IWGRP | 当前用户组的其他用户拥有写权限           |
+| \          | S_IXGRP | 当前用户组的其他用户拥有执行权限         |
+| \          | S_IRWXG | 当前用户组的其他用户拥有读、写、执行权限 |
+| 其他用户   | S_IROTH | 其他用户拥有读权限                       |
+| \          | S_IWOTH | 其他用户拥有写权限                       |
+| \          | S_IXOTH | 其他用户拥有执行权限                     |
+| \          | S_IROTH | 其他用户拥有读、写、执行权限             |
+
+### 2. read()
+
+```c
+#include <unistd.h>
+ssize_t read(int fd, void *buf, size_t count);
+
+// usage
+#include <sys/types.h>
+#include <unistd.h>
+char buf[20];
+size_t nbytes;
+ssize_t bytes_read;
+int fd;
+nbytes = sizeof(buf);
+bytes_read = read(fd, buf, nbytes);
+```
+
+`read` 函数用于从文件中读取若干个字节的数据，保存到数据缓冲区 buf 中，并返 回实际读取的字节数，具体函数参数如下：
+
+- fd：文件对应的文件描述符，可以通过 fopen 函数获得。另外，当一个程序运行时，Linux 默认有 0、1、2 这三个已经打开的文件描述符，分别对应了标准输入、标准输出、标准错误输出，即可以直接访问这三种文件描述符
+- buf：指向数据缓冲区的指针
+- count：读取多少个字节的数据
+
+### 3. write()
+
+```c
+#include <unistd.h>
+ssize_t write(int fd, const void *buf, size_t count);
+
+// usage
+#include <sys/types.h>
+#include <string.h>
+char buf[20];
+size_t nbytes;
+ssize_t bytes_written;
+int fd;
+strcpy(buf, "This is a test\n");
+nbytes = strlen(buf);
+bytes_written = write(fd, buf, nbytes);
+```
+
+write 函数用于往文件写入内容，并返回实际写入的字节长度，具体函数参数如下：
+
+- fd：文件对应的文件描述符，可以通过 fopen 函数获得
+- buf：指向数据缓冲区的指针
+- count：往文件中写入多少个字节
+
+### 4. close()
+
+```c
+int close(int fd);
+
+// usage
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#define LOCKFILE "/etc/ptmp"
+int pfd;
+FILE *fpfd;
+if ((fpfd = fdopen (pfd, "w")) == NULL) {
+    close(pfd);
+    unlink(LOCKFILE);
+    exit(1);
+}
+```
+
+### 5. lseek()
+
+`lseek` 函数可以用与设置文件指针的位置，并返回文件指针相对于文件头的位置。
+
+```c
+off_t lseek(int fd, off_t offset, int whence);
+```
+
+它的用法与 `flseek` 一样，其中的 offset 参数用于指定位置，whence 参数则定义了 offset 的意义，whence 的可取值如下：
+
+- `SEEK_SET`：offset 是一个绝对位置。
+- `SEEK_END`：offset 是以文件尾为参考点的相对位置。
+- `SEEK_CUR`：offset 是以当前位置为参考点的相对位置。
+
+### Usage
+
+```c
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <string.h>
+
+//文件描述符
+int fd;
+char str[100];
+
+
+int main(void)
+{
+   //创建一个文件
+   fd = open("testscript.sh", O_RDWR|O_CREAT|O_TRUNC, S_IRWXU);
+   //文件描述符fd为非负整数
+   if(fd < 0){
+      printf("Fail to Open File\n");
+      return 0;
+   }
+   //写入字符串pwd
+   write(fd, "pwd\n", strlen("pwd\n"));
+
+   //写入字符串ls
+   write(fd, "ls\n", strlen("ls\n"));
+
+   //此时的文件指针位于文件的结尾处，使用lseek函数使文件指针回到文件头
+   lseek(fd, 0, SEEK_SET);
+
+   //从文件中读取100个字节的内容到str中，该函数会返回实际读到的字节数
+   read(fd, str, 100);
+
+   printf("File content:\n%s \n", str);
+
+   close(fd);
+
+   return 0;
+}
+```
+
+## Common header files
+
+我们常常会用到以下头文件，此处进行简单说明，若想查看具体的头文件内容，使用 `locate` 命令找到该文件目录后打开即可：
+
+- 头文件 *stdio.h*：C 标准输入与输出（standard input & output）头文件，我们经常使用的打印函数 `printf` 函数就位于该头文件中。
+- 头文件 *stdlib.h*：C 标准库（standard library）头文件，该文件包含了常用的 `malloc` 函数、`free` 函数。
+- 头文件 *sys/stat.h*：包含了关于文件权限定义，如 S_IRWXU、S_IWUSR，以 及函数 `fstat` 用于查询文件状态。涉及系统调用文件相关的操作，通常都需要用到 sys/stat.h 文件。
+- 头文件 *unistd.h*：UNIX C 标准库头文件，unix，linux 系列的操 作系统相关的 C 库，定义了 unix 类系统 POSIX 标准的符号常量头文件，比如 Linux 标准的输入文件描述符（`STDIN`），标准输出文件描述符（`STDOUT`），还有 `read`、`write` 等系统调用的声明。
+- 头文件 *fcntl.h*：unix 标准中通用的头文件，其中包含的相关函数有 `open`，`fcntl`，`close` 等操作。
+- 头文件 *sys/types.h*：包含了 Unix/Linux 系统的数据类型的头文件，常用的有 `size_t`，`time_t`，`pid_t` 等类型。
+
+示例代码中的开头包含了一系列 Linux 系统常用的头文件。今后学习 Linux 的过程中，我们可能会接触各种各样的头文件，因此了解一下 Linux 中头文件的用法十分有必要。
+
+在 linux 中，大部分的头文件在系统的 **“/usr/include”** 目录下可以找到，它是**系统自带的 GCC 编译器默认的头文件目录**，如下图所示，如果把该目录下的 `stdio.h` 文件删除掉或更改名字（想尝试请备份），那么使用 GCC 编译 hello world 的程序会因为找不到 stdio.h 文件而报错。
+
+> locate 查找
+
+```bash
+$ locate sys/stat.h
+/usr/include/x86_64-linux-gnu/sys/stat.h
+
+
+$ ls -al /usr/include/x86_64-linux-gnu/sys
+total 496
+drwxr-xr-x  3 root root 12288 Jun 11  2023 .
+drwxr-xr-x 12 root root  4096 Dec 11 06:30 ..
+-rw-r--r--  1 root root  3302 Jul  6  2022 acct.h
+-rw-r--r--  1 root root  1260 Jul  6  2022 auxv.h
+-rw-r--r--  1 root root    86 Jul  6  2022 bitypes.h
+-rw-r--r--  1 root root 26600 Jul  6  2022 cdefs.h
+-rw-r--r--  1 root root  3576 Jul  6  2022 debugreg.h
+-rw-r--r--  1 root root   922 Jul  6  2022 dir.h
+-rw-r--r--  1 root root  1024 Jul  6  2022 elf.h
+-rw-r--r--  1 root root  5076 Jul  6  2022 epoll.h
+-rw-r--r--  1 root root    19 Jul  6  2022 errno.h
+-rw-r--r--  1 root root  1400 Jul  6  2022 eventfd.h
+-rw-r--r--  1 root root  1292 Jul  6  2022 fanotify.h
+-rw-r--r--  1 root root    19 Jul  6  2022 fcntl.h
+-rw-r--r--  1 root root  1675 Jul  6  2022 file.h
+-rw-r--r--  1 root root  1188 Jul  6  2022 fsuid.h
+-rw-r--r--  1 root root  6210 Jul  6  2022 gmon.h
+-rw-r--r--  1 root root  2577 Jul  6  2022 gmon_out.h
+-rw-r--r--  1 root root  3901 Jul  6  2022 inotify.h
+-rw-r--r--  1 root root  2027 Jul  6  2022 ioctl.h
+-rw-r--r--  1 root root  5086 Jul  6  2022 io.h
+-rw-r--r--  1 root root  1462 Jul  6  2022 ipc.h
+-rw-r--r--  1 root root  1112 Jul  6  2022 kd.h
+-rw-r--r--  1 root root  1204 Jul  6  2022 klog.h
+-rw-r--r--  1 root root  5552 Jul  6  2022 mman.h
+-rw-r--r--  1 root root  5706 Jul  6  2022 mount.h
+-rw-r--r--  1 root root  2623 Jul  6  2022 msg.h
+-rw-r--r--  1 root root 11111 Jul  6  2022 mtio.h
+-rw-r--r--  1 root root  3149 Jul  6  2022 param.h
+-rw-r--r--  1 root root   923 Jul  6  2022 pci.h
+-rw-r--r--  1 root root  1127 Jul  6  2022 perm.h
+-rw-r--r--  1 root root  2723 Jul  6  2022 personality.h
+drwxr-xr-x  2 root root  4096 Jun 11  2023 platform
+-rw-r--r--  1 root root  3025 Jul  6  2022 poll.h
+-rw-r--r--  1 root root  1795 Jul  6  2022 prctl.h
+-rw-r--r--  1 root root  4338 Jul  6  2022 procfs.h
+-rw-r--r--  1 root root  1959 Jul  6  2022 profil.h
+-rw-r--r--  1 root root  6282 Jul  6  2022 ptrace.h
+-rw-r--r--  1 root root 19539 Jul  6  2022 queue.h
+-rw-r--r--  1 root root  5173 Jul  6  2022 quota.h
+-rw-r--r--  1 root root  1471 Jul  6  2022 random.h
+-rw-r--r--  1 root root  1182 Jul  6  2022 raw.h
+-rw-r--r--  1 root root  1633 Jul  6  2022 reboot.h
+-rw-r--r--  1 root root  1827 Jul  6  2022 reg.h
+-rw-r--r--  1 root root  4034 Jul  6  2022 resource.h
+-rw-r--r--  1 root root  6715 Jul  6  2022 rseq.h
+-rw-r--r--  1 root root  5039 Jul  6  2022 select.h
+-rw-r--r--  1 root root  2660 Jul  6  2022 sem.h
+-rw-r--r--  1 root root  1806 Jul  6  2022 sendfile.h
+-rw-r--r--  1 root root  2131 Jul  6  2022 shm.h
+-rw-r--r--  1 root root  1714 Jul  6  2022 signalfd.h
+-rw-r--r--  1 root root    20 Jul  6  2022 signal.h
+-rw-r--r--  1 root root  1182 Jul  6  2022 single_threaded.h
+-rw-r--r--  1 root root 12382 Jul  6  2022 socket.h
+-rw-r--r--  1 root root   141 Jul  6  2022 socketvar.h
+-rw-r--r--  1 root root    29 Jul  6  2022 soundcard.h
+-rw-r--r--  1 root root  2094 Jul  6  2022 statfs.h
+-rw-r--r--  1 root root 13767 Jul  6  2022 stat.h
+-rw-r--r--  1 root root  2821 Jul  6  2022 statvfs.h
+-rw-r--r--  1 root root  1593 Jul  6  2022 swap.h
+-rw-r--r--  1 root root  1256 Jul  6  2022 syscall.h
+-rw-r--r--  1 root root  1518 Jul  6  2022 sysinfo.h
+-rw-r--r--  1 root root  7777 Jul  6  2022 syslog.h
+-rw-r--r--  1 root root  2103 Jul  6  2022 sysmacros.h
+-rw-r--r--  1 root root    74 Jul  6  2022 termios.h
+-rw-r--r--  1 root root  1155 Jul  6  2022 timeb.h
+-rw-r--r--  1 root root  9139 Jul  6  2022 time.h
+-rw-r--r--  1 root root  2583 Jul  6  2022 timerfd.h
+-rw-r--r--  1 root root  1597 Jul  6  2022 times.h
+-rw-r--r--  1 root root  2839 Jul  6  2022 timex.h
+-rw-r--r--  1 root root  2499 Jul  6  2022 ttychars.h
+-rw-r--r--  1 root root  3568 Jul  6  2022 ttydefaults.h
+-rw-r--r--  1 root root  5713 Jul  6  2022 types.h
+-rw-r--r--  1 root root  5842 Jul  6  2022 ucontext.h
+-rw-r--r--  1 root root  6796 Jul  6  2022 uio.h
+-rw-r--r--  1 root root  1453 Jul  6  2022 un.h
+-rw-r--r--  1 root root    20 Jul  6  2022 unistd.h
+-rw-r--r--  1 root root  5208 Jul  6  2022 user.h
+-rw-r--r--  1 root root  2481 Jul  6  2022 utsname.h
+-rw-r--r--  1 root root   161 Jul  6  2022 vfs.h
+-rw-r--r--  1 root root  1880 Jul  6  2022 vlimit.h
+-rw-r--r--  1 root root  1199 Jul  6  2022 vm86.h
+-rw-r--r--  1 root root    22 Jul  6  2022 vt.h
+-rw-r--r--  1 root root  6233 Jul  6  2022 wait.h
+-rw-r--r--  1 root root  4275 Jul  6  2022 xattr.h
+```
+
+## Linux File System Evolution｜FAST'13 Paper
+
+研究涉及六个主要的Linux文件系统：Ext3、Ext4、XFS、Btrfs、ReiserFS和JFS。这些文件系统在功能、设计、实现和开发团队上都有所不同。研究团队检查了Linux 2.6系列中每个文件系统的每个补丁，通过理解每个补丁的意图并对其进行分类，从而深入量化地洞察文件系统开发过程。研究结果回答了诸如“大多数补丁是什么？”“常见的错误类型是什么？”等问题，并提供了对当前文件系统开发和维护中常见方法和问题的新的见解。
+
+主要观察结果包括：
+
+1. **近50%的补丁是维护补丁**，反映了保持代码简单和可维护所需的持续重构工作。
+2. **剩余的主要类别是错误修复**（近40%，约1800个错误），显示了实现“正确”版本所需的努力。
+3. 错误数量并没有随时间减少，即使对于稳定的文件系统也是如此。
+4. 进一步分析错误类别，语义错误（需要理解文件系统语义才能找到或修复的错误）是主导错误类别（超过50%的所有错误）。
+5. **并发错误是第二常见的**（约占错误总数的20%），比用户级软件更为普遍。
+6. 内存错误和错误代码处理错误也较为常见，大多数错误代码错误完全忽略了错误。
+
+此外，研究还发现，大多数错误（研究中的错误）会导致崩溃或数据损坏，这些结果在语义、并发、内存和错误代码错误中都成立。研究还发现，B树（许多文件系统中用于可扩展性的结构）的错误数量相对较少。大约40%的错误发生在错误处理路径上，文件系统在尝试响应失败的内存分配、I/O错误或其他意外情况时，很容易犯下进一步的错误，如状态更新不正确和资源释放遗漏。
+
+性能和可靠性补丁也占有一定比例，分别占8%和7%。性能技术相对常见和广泛，例如去除不必要的I/O或降低写锁到读锁。约四分之一的性能补丁减少了同步开销。与性能技术相比，可靠性技术的添加似乎更加随意。
+
+研究的另一个成果是一个公开的文件系统补丁注释数据集，供文件系统开发者、系统语言设计者和错误检测工具构建者进一步研究。研究通过一个案例研究展示了这个数据集的实用性，特别是搜索数据集以找到所有文件系统中异常常见的错误、性能修复和可靠性技术。
+
+## A look at the dark history of Linux file systems
+
+### Linus 又发飙了，这一次是 ext4
+
+如果你订阅了 Linux Kernel 的 maillist，你一定发现最近 Linus 又爆粗口了，而这次的对象是 ext4 文件系统。
+
+> On Sun, Aug 6, 2017 at 12:27 PM, Theodore Ts'o tytso@mit.edu wrote:
+> \>
+> \> A large number of ext4 bug fixes and cleanups for v4.13
+>
+> A couple of these appear to be neither cleanups nor fixes. And a lot
+> of them appear to be very recent.
+>
+> I've pulled this, but if I hear about problems, ext4 is going to be on
+> my shit-list, and you'd better be a *lot* more careful about pull
+> requests. Because this is not ok.
+>
+> Linus
+
+而这已经不是 Linus 第一次对 ext4 文件系统表达不满了。
+
+尽管 ext4 文件系统已经发布了多年，也被广泛应用于桌面及服务器，但关于 ext4 存在可能丢数据的 Bug 报告就一直没有中断过。例如在 2012 年的一封[邮件](https://lkml.org/lkml/2012/10/23/690)中，Theodore Ts'o 报告了一次严重的 Bug，已经影响了部分 Linux 稳定版本的内核。
+
+如果你持续关注文件系统或内核技术，你一定注意过这样一篇文章：[Fuzzing filesystem with AFL](https://lwn.net/Articles/685182/)。Vegard Nossum 和 Quentin Casasnovas 在 2016 年将用户态的 Fuzzing 工具 AFL（American Fuzzing Lop）迁移到内核态，并针对文件系统进行了测试。
+
+![image-20241230085245554](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202412300852927.png)
+
+结果是相当惊人的：Btrfs，作为 SLES（SUSE Linux Enterprise Server）的默认文件系统，仅在测试中坚持了 5 秒钟就挂了。而 ext4 坚持时间最长，但也仅有 2 个小时而已。
+
+这个结果给我们敲响了警钟，**Linux 文件系统并没有我们想象中的那么稳定**。而事实上，在 Fuzz 测试下坚持时间长短仅仅体现出文件系统稳定性的一部分。数据可靠性，才是文件系统中最核心的属性。然而 Linux 文件系统社区的开发者往往都把注意力放在了性能，以及高级功能的开发上，而忽略了可靠性。
+
+带大家回顾一下 Linux 文件系统的黑历史，希望能够警醒大家，不要过分相信和依赖文件系统。同时，在使用文件系统构建应用时，也需要采用正确的“姿势”。
+
+### POSIX，一个奇葩的标准
+
+谈到 Linux 文件系统，不得不提到 [POSIX（Portable Operating System Interface）](https://en.wikipedia.org/wiki/POSIX)，这样一个奇葩的标准。而开发者对于 POSIX 的抱怨，可谓是罄竹难书。
+
+作为一个先有实现，后有标准的 POSIX，在文件系统接口上的定义，可谓是相当的“简洁”。尤其当系统发生 crash 后，对于文件系统应有的行为，更是完全空白，这留给了文件系统开发者足够大的“想象空间”。也就是说，如果一个 Linux 文件系统在系统发生崩溃重启后，整个文件系统的内容都不见了，也是“符合标准”的。
+
+而事实上，类似的事情确实发生过：在 2015 年，ChromeOS 的开发者曾报告了一个 ext4 的问题，有可能导致 Chrome 发生崩溃。而来自 ext4 开发者的回答是，[“Working As Intended”](https://issuetracker.google.com/issues/172227346?pli=1)。
+
+在历史上，不断有人尝试给文件系统提供更加严谨的 Consistency（一致性）定义，尤其是 Crash-Consistency（故障后的一致性）。到目前为止，尽管 POSIX 也经历了几个版本，但关于文件系统接口的定义，还是那个老样子。而 POSIX 标准，也是造成了文件系统各种问题的一个很重要的因素。关于各种一致性的定义，我们后面也会有文章专门进行介绍。
+
+### 文件系统的黑历史
+
+> 《A Study of Linux File System Evolution》
+
+文件系统一直有着光辉的发展历史，也孕育了许多伟大的 Linux 内核贡献者。从最早的 FFS，到经典的 ext2/ext3/ext4，再到拥有黑科技的 Btrfs，XFS，BCacheFS 等。
+
+![image-20241230085703571](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202412300857784.png)
+
+然而软件开发的过程，当然不是一帆风顺的。威斯康辛大学麦迪逊分校的研究者曾在 FAST '13 上发表过一篇著名的论文[《A Study of Linux File System Evolution》](https://www.usenix.org/system/files/login/articles/03_lu_010-017_final.pdf)。文章对 8 年中，Linux 社区与文件系统相关的 5079 个 Patch 进行了统计和分析。从其数据中可以看出，有将近 40% 的文件系统相关的 Patch 属于 Bugfix 类型。换句话说，每提交两个 Patch，就有可能需要一个 Patch 用于 Bugfix。
+
+![image-20241230085816284](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202412300858522.png)
+
+而文件系统的 Bug 数量并没有随着时间的推移而逐渐收敛，随着新功能不断的加入，Bug 还在持续不断的产生。而 Bug 的集中爆发也往往源于大的功能演进。
+
+![image-20241230085918306](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202412300859408.png)
+
+而从上图中可以看出，在所有的 Bug 中，有接近 40% 的 Bug 可能导致数据损坏，这还是相当惊人的。
+
+可以想象，在 Linux 文件系统的代码库中，还隐藏着许多 Bug，在等待着被人们发现。
+
+哥伦比亚大学文件系统领域著名的专家 Junfeng Yang，曾经在 OSDI '04 上发表了一篇论文[《Using Model Checking to Find Serious File System Errors》](https://www.usenix.org/legacy/event/osdi04/tech/yang/yang.pdf)，该论文也是当年 OSDI 的 Best Paper。在这篇论文中，Junfeng Yang 通过 FiSC，一种针对文件系统的 Model Checking 工具，对 ext3，JFS，ReiserFS 都进行了检查，结果共发现了 32 个 Bug。而不同于 AFL，FiSC 发现的 Bug 大部分都会导致数据丢失，而不仅仅是程序崩溃。例如文章中指出了一处 ext3 文件系统的 Bug，该 Bug 的触发原因是在通过 fsck 进行数据恢复时，使用了错误的写入顺序，在 journal replay 的过程中，journal 中的数据还没有持久化到磁盘上之前，就清理了 journal，如果此时发生断电故障，则导致数据永久性丢失。
+
+### 对应用程序开发的影响
+
+对于大部分应用程序开发者来说，并不会直接使用文件系统。很多程序员都是面向数据库进行编程，他们的数据大多是存在数据库中的。我们经常想当然的认为，数据库的开发者理应会理解文件系统可能存在的问题，并绕过文件系统的 Bug，帮助我们解决各种问题。然而这只是一种侥幸心理罢了，由于文件系统过于复杂，标准不清晰，即使是专业的数据库的开发人员，也往往无法避开文件系统中所有的问题。
+
+以 LevelDB，我们最常用的一种单机 Key-Value Store 举例。研究人员分别对 LevelDB 的两个版本，1.10 和 1.15 进行了测试，分别发现了 10 个和 6 个不同程度的漏洞。其中 1.10 版本有 1 个漏洞可能导致数据丢失，5 个漏洞导致数据库无法打开，4 个漏洞导致数据库读写错误。而 1.15 版本分别有 2 个漏洞导致数据库无法打开，2 个漏洞导致数据库读写错误。
+
+这些问题，大部分源自应用开发者对文件系统错误的假设。也就是说，他们以为文件系统可以保证的特性，而事实上并不能得到保证。而这些特性，也都是 POSIX 标准中未曾明确定义的。
+
+这里举个例子：**Append atomicity，追加写原子性。**
+
+向文件中追加写入，并不意味着是原子性的。如前文 ChromeOS 开发者遇到的 ext4 的问题，其根本原因，就是假设 ext4 文件系统是保证追加写原子性的。在这封邮件中，开发者提供了一个可以复现问题的步骤。假设文件中已经有 2522 字节的数据，再追加写入 2500 字节的数据，文件大小本应为 5022 字节。而如果在追加写的过程中，遇到系统崩溃，在系统恢复后，文件的大小可能是 4096 字节，而非 5022 字节，而文件的内容，也可能是垃圾数据，无法被程序正确识别。
+
+LevelDB 同样也假设了文件系统具有追加写的原子性，前面提到的一些漏洞就源于此。
+
+而这仅仅是冰山一角。单单关于文件系统写入数据的原子性，就有包括：单 sector 覆盖写，单 sector 追加写，单 block 覆盖写，单 block 追加写，多 block 追加写等等。而对于不同类型的文件系统，甚至同一个文件系统的使用不同参数，对于原子性都可能具有不同范围的支持。再考虑到 POSIX 提供的其他接口，包括 `creat`，`rename`，`unlink`，`truncate` 等等。这使得开发应用系统，尤其是数据库系统，变得非常复杂。
+
+## 开发者的正确姿势是什么
+
+这里我们提供一些建议，希望能够帮助大家尽量少的踩坑。
+
+首先，对于大部分应用程序员来说，应尽可能选择使用成熟的数据库，而非直接操作文件。尽管如前文所说，在复杂的文件系统面前，数据库也无法幸免于难，但数据库开发者掌握的关于文件系统的知识，还是远远强于普通开发者的。数据库也通常提供了数据恢复工具，以及备份工具。这避免了开发者重新造轮子，也极大的减轻了灾难发生后可能带来的影响。
+
+而对于单机数据库，分布式数据库，以及分布式存储的开发者来说，我们的建议是尽量避免直接使用文件系统，尽可能多的直接使用裸设备，这避免了很多可能引起问题的接口，例如 `creat`，`rename`，`truncate` 等。例如 [SmartX](https://www.smartx.com/) 在设计和实现分布式存储时，就直接使用裸设备。
+
+如果必须要使用文件系统，也要使用尽量简单的 IO 模型，避免多线程，异步的操作。同时，一定要在设计的过程中，把对于文件系统操作的模型抽象出来，并画成步骤图，这里我们推荐 [draw.io](https://app.diagrams.net/)，一个非常不错的免费画图工具。要假设每一个步骤都可能失败，每一个步骤失败后，都可能产生垃圾数据，要提前设计好数据校验以及处理垃圾数据的方式。如果步骤之间有存在依赖关系，一定要在执行下一步之前，调用 fsync()，以保证数据被持久化到磁盘中。
+
+最后，设计和实现完成后，在单元测试和集成测试的过程中，也一定要增加故障测试。例如在单元测试中，通过 mock 的方式模拟 IO 故障，在集成测试中，可以加入随机 kill 进程，随机重启服务器的测试用例，也可以通过 [dm-delay](https://www.kernel.org/doc/Documentation/device-mapper/delay.txt)，[dm-flakey](https://www.kernel.org/doc/Documentation/device-mapper/dm-flakey.txt) 等工具进行磁盘故障模拟。
+
+看了这么多黑历史，真的是三观都毁掉了。而事实上，我们每天确实都生活在这些危机中。
+
+这里要强调的是，我并不是想诋毁 Linux 文件系统，相反，我们非常感谢 Linux 内核开发者在文件系统方面做出的贡献。但同时，由于系统的复杂度所带来的严重问题也是无法回避的。在 Linux 文件系统的代码中，必然还存在着很多未被发现的严重 Bug，开发者和研究人员也从来没有停止过寻找 Bug 的努力。而随着新功能不断地加入，新的 Bug 也在不断的产生。我们多一些这方面的思考和谨慎，并不是什么坏事。
+
+---

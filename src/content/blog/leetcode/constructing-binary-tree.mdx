@@ -1,0 +1,185 @@
+---
+title: 根据（前中后序）构造二叉树系列
+description: 根据前序和后序遍历构造二叉树、从前序与中序遍历序列构造二叉树、从中序与后序遍历序列构造二叉树、前序遍历构造二叉搜索树
+publishDate: 2025-04-28
+tags: [leetcode]
+heroImage: { src: ../_img/202501222250241.jpeg }
+language: Chinese
+comment: true
+draft: false
+---
+
+## ✅ 构造二叉树系列
+
+相关例题：
+
+- [889. 根据前序和后序遍历构造二叉树](https://leetcode.cn/problems/construct-binary-tree-from-preorder-and-postorder-traversal/description/)（不唯一）
+- [105. 从前序与中序遍历序列构造二叉树](https://leetcode.cn/problems/construct-binary-tree-from-preorder-and-inorder-traversal/description/)（唯一）
+- [106. 从中序与后序遍历序列构造二叉树](https://leetcode.cn/problems/construct-binary-tree-from-inorder-and-postorder-traversal/description/)（唯一）
+- [1008. 前序遍历构造二叉搜索树](https://leetcode.cn/problems/construct-binary-search-tree-from-preorder-traversal/description/)
+
+## [1008. 前序遍历构造二叉搜索树](https://leetcode.cn/problems/construct-binary-search-tree-from-preorder-traversal/)
+
+题意：根据前序遍历结果构造二叉搜索树
+
+![img](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202504280108994.png)
+
+```cpp
+输入：preorder = [8,5,1,7,10,12]
+输出：[8,5,10,1,7,null,12]
+```
+
+### 1️⃣ buildTree · 递归
+
+```cpp
+class Solution {
+public:
+    TreeNode* buildTree(vector<int>& preorder, int left, int right) {
+        if (left > right) {
+            return nullptr;
+        }
+        int i;
+        for (i = left + 1; i <= right; i++) {
+            if (preorder[i] > preorder[left])
+                break;
+        }
+        TreeNode* _left = buildTree(preorder, left + 1, i - 1);
+        TreeNode* _right = buildTree(preorder, i, right);
+        return new TreeNode(preorder[left], _left, _right);
+    }
+
+    TreeNode* bstFromPreorder(vector<int>& preorder) {
+        if (preorder.empty())
+            return nullptr;
+        return buildTree(preorder, 0, preorder.size() - 1);
+    }
+};
+```
+
+```cpp
+class Solution {
+public:
+    TreeNode* bstFromPreorder(vector<int>& preorder) {
+        if (preorder.empty())
+            return nullptr;
+        int i = upper_bound(preorder.begin() + 1, preorder.end(), preorder[0]) - preorder.begin();
+        vector<int> preleft(preorder.begin() + 1, preorder.begin() + i);
+        vector<int> preright(preorder.begin() + i, preorder.end());
+        TreeNode* left = bstFromPreorder(preleft);
+        TreeNode* right = bstFromPreorder(preright);
+        return new TreeNode(preorder[0], left, right);
+    }
+};
+```
+
+## [106. 从中序与后序遍历序列构造二叉树](https://leetcode.cn/problems/construct-binary-tree-from-inorder-and-postorder-traversal/)
+
+![img](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202504280110031.jpg)
+
+```cpp
+输入：inorder = [9,3,15,20,7], postorder = [9,15,7,20,3]
+输出：[3,9,20,null,null,15,7]
+```
+
+### 1️⃣ 递归
+
+![LC106-c.png](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202504280111507.png)
+
+```cpp
+class Solution {
+public:
+    TreeNode* buildTree(vector<int>& inorder, vector<int>& postorder) {
+        if (inorder.empty())
+            return nullptr;
+        int i = ranges::find(inorder, postorder.back()) - inorder.begin();
+        vector<int> in1(inorder.begin(), inorder.begin() + i);
+        vector<int> in2(inorder.begin() + i + 1, inorder.end());
+        vector<int> post1(postorder.begin(), postorder.begin() + i);
+        vector<int> post2(postorder.begin() + i, postorder.end() - 1);
+        TreeNode* left = buildTree(in1, post1);
+        TreeNode* right = buildTree(in2, post2);
+        return new TreeNode(postorder.back(), left, right);
+    }
+};
+```
+
+## [105. 从前序与中序遍历序列构造二叉树](https://leetcode.cn/problems/construct-binary-tree-from-preorder-and-inorder-traversal/)
+
+![img](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202504280112198.jpg)
+
+```cpp
+
+输入: preorder = [3,9,20,15,7], inorder = [9,3,15,20,7]
+输出: [3,9,20,null,null,15,7]
+```
+
+### 1️⃣ 递归
+
+![lc105-c.png](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202504280113037.png)
+
+```cpp
+class Solution {
+public:
+    TreeNode* buildTree(vector<int>& preorder, vector<int>& inorder) {
+        if (preorder.empty())
+            return nullptr;
+        int i = ranges::find(inorder, preorder[0]) - inorder.begin();
+        vector<int> pre1(preorder.begin() + 1, preorder.begin() + i + 1);
+        vector<int> pre2(preorder.begin() + i + 1, preorder.end());
+        vector<int> in1(inorder.begin(), inorder.begin() + i);
+        vector<int> in2(inorder.begin() + i + 1, inorder.end());
+        TreeNode* left = buildTree(pre1, in1);
+        TreeNode* right = buildTree(pre2, in2);
+        return new TreeNode(preorder[0], left, right);
+    }
+};
+```
+
+## [889. 根据前序和后序遍历构造二叉树](https://leetcode.cn/problems/construct-binary-tree-from-preorder-and-postorder-traversal/)
+
+> 如果存在多个答案，您可以返回其中 **任何** 一个。
+
+![img](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202504280116935.jpg)
+
+```cpp
+输入：preorder = [1,2,4,5,3,6,7], postorder = [4,5,2,6,7,3,1]
+输出：[1,2,3,4,5,6,7]
+```
+
+### 1️⃣ 递归
+
+首先说明，如果只知道前序遍历和后序遍历，这棵二叉树不一定是唯一的，如下图。
+
+![lc889-1.png](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202504280116261.png)
+
+题目说，如果存在多个答案，我们可以返回其中任何一个。那么不妨**规定**：无论什么情况，在前序遍历中，*preorder*[1] 都是**左子树**的根节点值。
+
+![lc889-2-c.png](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202504280116240.png)
+
+**递归边界**：
+
+- 如果 *preorder* 的长度是 0，对应着空节点，返回空。
+- 如果 *preorder* 的长度是 1，对应着二叉树的叶子，创建一个叶子节点并返回。
+
+```cpp
+class Solution {
+public:
+    TreeNode* constructFromPrePost(vector<int>& preorder, vector<int>& postorder) {
+        if (preorder.empty()) {
+            return nullptr;
+        }
+        if (preorder.size() == 1) {
+            return new TreeNode(preorder[0]);
+        }
+        int left_size = find(postorder.begin(), postorder.end(), preorder[1]) - postorder.begin() + 1;
+        vector<int> pre1(preorder.begin() + 1, preorder.begin() + left_size + 1);
+        vector<int> pre2(preorder.begin() + left_size + 1, preorder.end());
+        vector<int> post1(postorder.begin(), postorder.begin() + left_size);
+        vector<int> post2(postorder.begin() + left_size, postorder.end() - 1);
+        TreeNode* root = new TreeNode(preorder[0]);
+        root->left = constructFromPrePost(pre1, post1);
+        root->right = constructFromPrePost(pre2, post2);
+        return root;
+    }
+};
+```

@@ -1,0 +1,1006 @@
+---
+title: Python 编程指南
+description: 速通 Python 基础语法
+publishDate: 2025-04-12
+tags: [python]
+language: Chinese
+comment: true
+draft: false
+---
+
+## Python 之禅
+
+```python
+import this
+'''
+The Zen of Python, by Tim Peters
+
+Beautiful is better than ugly.
+Explicit is better than implicit.
+Simple is better than complex.
+Complex is better than complicated.
+Flat is better than nested.
+Sparse is better than dense.
+Readability counts.
+Special cases aren't special enough to break the rules.
+Although practicality beats purity.
+Errors should never pass silently.
+Unless explicitly silenced.
+In the face of ambiguity, refuse the temptation to guess.
+There should be one-- and preferably only one --obvious way to do it.
+Although that way may not be obvious at first unless you're Dutch.
+Now is better than never.
+Although never is often better than *right* now.
+If the implementation is hard to explain, it's a bad idea.
+If the implementation is easy to explain, it may be a good idea.
+Namespaces are one honking great idea -- let's do more of those!
+'''
+```
+
+## Python 命名规范
+
+[传送门](https://www.jianshu.com/p/a793c0d960fe)
+
+## 基本数据类型
+
+定义：
+
+```python
+message = "Hello Python!"
+print(message)
+```
+
+### 字符串
+
+可以是单引号 `' '`，也可以是双引号 `" "`，之间可以相互嵌套。
+
+`API` Document：
+
+```python
+name = "Gulf Alaska"
+name.tile()
+name.upper()
+name.lower()
+name.lstrip()
+name.rstrip()
+```
+
+#### 切片
+
+不仅列表有切片，字符串也有：
+
+```python
+# Python 字符串可以像 Java 中的 char[] 直接取值
+print(name[0])		# G
+print(name[1])		# u
+print(name[2])		# l
+print(name[2:7])	# lf Al
+```
+
+### 数字
+
+```python
+# 唯一需要注意的是 / 和 **
+print(3 / 2)	# 1.5
+print(3 ** 3)	# 9
+print(3 // 2)	# 1 (整除, 向下取整)
+
+# 错误! ==> 为避免类型错误使用str()
+''' python数字类型不会自动转string类型, 需要str()支撑 '''
+print("Hello: " + str(143))
+```
+
+### 列表
+
+Python 中，用方括号 `[]` 表示列表，并用逗号来分隔其中的元素。
+
+```python
+lista = ['hi', 'Fighting', 'hhh']
+print(lista)	# ['hi', 'Fighting', 'hhh']
+print(lista[1])	# Fighting
+# Python为访问列表最后一个元素提供的一种方式
+print(lista[-1])# hhh
+```
+
+#### 修改元素
+
+```python
+# 同 java
+lista[0] = 'hello'
+# 倒 1 位
+lista[-1] = 'hello'
+# 倒 2 位
+lista[-2] = 'hello'
+```
+
+#### 添加元素
+
+```python
+lista.append('what')
+lista.insert(1, 'hihihi')
+```
+
+#### 删除元素
+
+```python
+del lista[0]
+member = lista.pop()	# 最后一个
+member = lista.pop(3)	# 指定弹出某一个
+lista.remove('hi')		# 根据value来删除元素
+```
+
+#### 排序列表
+
+```python
+numberList.sort()
+numberList.sort(reverse=True)
+sorted(numberList)
+sorted(numberList, reverse=True)
+numberList.reverse()
+len(numberList)
+```
+
+#### 遍历列表
+
+Python 根据**缩进**来**判断代码行与前一个代码行的关系**！
+
+随意缩进会导致错误！
+
+```python
+# for在前、别忘:、注意缩进关系！
+for x in list:
+    print(x)
+    print(x + str(666))
+```
+
+#### 数值列表
+
+```python
+# 数值列表
+for i in range(1, 5):
+    print(i)
+# 从 0 遍历到 29, 也可以用于循环次数！
+for i in range(30):
+    print(i)
+
+# 将一系列数值转化为列表: list(range())
+number = list(range(1, 6))
+print(number)
+
+# 指定步长2
+for i in range(1, 11, 2):
+    print(i)
+
+# 对数值列表进行简单的统计
+print(min(number))
+print(max(number))
+print(sum(number))
+
+# x^2加入到列表中
+x2 = []
+for x in range(1, 11):
+    x2.append(x ** 2)
+print(x2)
+
+# 列表解析：将上面的平方和数可以转化如下
+# 在循环中解析出 value**2 并添加到 square
+square = [value ** 2 for value in range(1, 11)]
+print(square)
+
+```
+
+#### 切片
+
+切片：即使用列表的一部分
+
+```python
+# 1.切片
+techs = ['vue', 'react', 'spring', 'spring boot', 'spring cloud', 'java', 'javascript', 'python', 'c', 'c++', 'go']
+print(techs[1:3])
+print(techs[2:])
+print(techs[:4])
+print(techs[:])
+
+# 2.遍历切片
+for i in techs[2:6]:
+    print(i)
+
+# 3.复制切片
+myStack = techs[:]
+print("myStack: " + str(myStack))
+
+# 4.引用而非复制: 同一个列表
+yours = techs
+techs.append("is?!")
+print(techs)
+print(yours)
+```
+
+#### 列表的其他操作
+
+```python
+# 判断某个元素是否在列表中！
+print('hi' in _list)		# True!
+print('hi' not in _list)	# False!
+
+# 确定列表不为空?
+request = []
+if request:
+    print('not null')
+else:
+    print('null')
+
+```
+
+### 元组
+
+元组：即**不可变**(不可修改)的列表
+
+```python
+# 列表
+list = [1, 2, 3]
+# 元组
+dimensions = (1, 2, 3)
+for dimension in dimensions:
+    print(dimension)
+
+dimensions = (2, 3, 4)	# 重新赋值, 可行
+```
+
+相对于列表，元组是更简单的数据结构。如果需要存储的一组值在整个生命周期内都不变，可使用元组。
+
+## for 循环、if 条件判断
+
+for 循环在前文其实已经谈到了，不清楚的可以回看一下。
+
+注意：`for`、`if`、`else` 这种都不需要括号 `()`，但都需要冒号 `:`
+
+```python
+# if判断语句
+nums = [1, 3, 4, 6, 7, 9, 14]
+for num in nums:
+    if num <= 6:
+        print('small')
+    elif 6 < num < 10:
+        print('middle')
+    else:
+        print('big')
+
+# 判断特定值是否包含在列表中
+if 6 in nums:
+    print('好耶!')
+print(10 in nums)
+# 判断特定值是否不包含在列表中
+print(10 not in nums)
+
+```
+
+## 布尔表达式
+
+```python
+# 判断特定值是否包含在列表中
+if 6 in nums:
+    print('好耶!')
+
+print(10 in nums)		# True or False
+print(10 not in nums)	# True or False
+
+# 确定列表不为空?
+request = []
+if request:
+    print('not null')
+else:
+    print('null')
+
+# and、or
+if i > 6 and j < 3:
+    print('and')
+elif i < 3 or j >= 6:
+    print('or')
+
+```
+
+## 字典
+
+在 Python 中，字典是一系列 '**键值对**'，好比 Java 中的 Map 数据结构。
+
+```python
+# Python字典
+languages = {'TypeScript': 'not', 'Java': 'good', 'C++': 'Not Good', 'C': 'just so so', 'Python': 'Learning', 'Go': 'hurry'}
+print(languages['TypeScript'])  # not
+print(languages['Go'])          # hurry
+```
+
+### 访问
+
+```python
+print(languages['Python'])
+```
+
+### 添加
+
+```python
+# 添加键值对
+languages['Kotlin'] = 'Android Language'
+```
+
+### 修改
+
+```python
+# 修改字典的值
+languages['Go'] = 'nearly'
+```
+
+### 删除
+
+```python
+# 删除字典键值对
+del languages['Java']
+```
+
+### 遍历字典
+
+```python
+# 遍历字典
+for lang, level in languages.items():
+    print(lang + ': ' + level)
+# 也可以, 输出对象
+for keyValue in languages.items():
+    print(keyValue)
+```
+
+### 遍历字典中的所有键
+
+```python
+# keys()
+for key in languages.keys():
+    print(key.title())
+
+# 按顺序遍历所有键: sorted()
+for key in sorted(languages.keys()):
+    print(key.title())
+```
+
+### 遍历字典中的所有值
+
+字典的键是默认不重复的，那如果想要值也不重复，那么就需要用到 `set()` 来找出独一无二的元素。
+
+```python
+# values()
+for value in languages.values():
+    print(value.upper())
+
+# set()
+for value in set(languages.values()):
+    print(value)
+```
+
+### 嵌套
+
+字典嵌套列表；列表嵌套字典；字典嵌套字典；列表嵌套列表。无异于 JavaScript。
+
+#### 字典列表
+
+> 列表中存储字典
+
+```python
+# 字典列表
+obj1 = {'key1': 'val1'}
+obj2 = {'key2': 'val2'}
+obj3 = {'key3': 'val3'}
+objList = [obj1, obj2, obj3]
+for obj in objList:
+    print(obj)
+```
+
+#### 字典中存储列表
+
+```python
+# 字典中存储列表
+pizza = {
+    'crust': ['thick', 'think'],
+    'toppings': ['mushrooms', 'extra cheese']
+}
+
+for key, value in pizza.items():
+     print('key: ' + key)
+     for topping in value:
+         print('value: ' + topping)
+
+for topping in pizza['toppings']:
+    print(topping)
+```
+
+#### 字典中存储字典
+
+```python
+# 字典中存储字典
+users = {
+    'user1': {
+        'name': 'hi',
+        'age': 19
+    },
+    'user2': {
+        'name': 'hello',
+        'age': 20
+    },
+    'user3': {
+        'name': 'halo',
+        'age': 21
+    },
+}
+# info字典一定要使用str()转为str,否则: TypeError: can only concatenate str (not "dict") to str
+for username, info in users.items():
+    print(username + ": " + str(info))
+```
+
+#### 列表中存储列表
+
+```python
+# 列表中存储列表
+infoList = [
+    [1, 2, 3],
+    ['a', 'b', 'c']
+]
+for info in infoList:
+    print(info)
+```
+
+## Remember
+
+> if、elif、else、while 都需要**冒号**！
+>
+> 包括后面要学的函数定义，也是如此！
+>
+> ⭐因为 Python 中 `:` 等价于 `{}`
+
+## 用户输入 input()
+
+```python
+# 用户输入: input()中用于存储提示信息
+while True:
+    phone = input('please input your telephoneNumber: ')
+    if phone == 'q':
+        break
+    print(phone)
+```
+
+### 使用 `int()` 获取数值输入
+
+```python
+while True:
+    ids = input('please input your ID: ')
+    if ids == 'q':
+        break
+    # int(): 将str()转化为数值int()
+    ids = int(ids)
+    if ids >= 143:
+        print(ids)
+```
+
+## 函数
+
+**基本定义与使用**：
+
+```python
+# 冒号 : 结尾
+def add_two_number(message):
+    print(message)
+
+add_two_number('Hello Python!')
+```
+
+### 传递参数
+
+#### 位置实参
+
+```python
+def function1(name, age):
+    print(name + ': ' + str(age))
+
+# 根据位置传入 (同Java)
+function1('alawan', 23)
+```
+
+#### 关键词实参
+
+```python
+def function1(name, age):
+    print(name + ': ' + str(age))
+
+# 关键词实参
+function1(age=26, name='hhh')
+```
+
+### 默认值
+
+使用默认值时，在形参列表中必须先列出没有默认值的参数，再列出有默认值的参数。
+
+```python
+# age 不能定义在 name 后面！
+def function2(age, name='Judge'):
+    print(name + ": " + str(age))
+
+
+function2(16)
+function2(16, 'notDefault')
+```
+
+### 返回值
+
+```python
+# 有返回值直接return, 跟函数定义格式无关
+def function3(message):
+    return message
+
+# 同
+msg = function3('GG')
+
+msg = function3({'name': 'p', 'age': 19})
+
+msg = function3([1, 2, 3])
+```
+
+### 传递列表
+
+> **传递**参数中存在一个比较特殊的情况，也就是形参是列表：
+>
+> - 普通传入的话，函数是可以修改列表的，也就是和列表共用一个引用对象
+> - 还有一种的**禁止函数修改列表**方式的传入
+>
+> 但不论怎么传入函数的，函数的定义还是一样。
+
+```python
+# 传递列表
+def greet_users(users):
+    for user in users:
+        print('hello: ' + user)
+
+
+_users = ['qqq', 'www', 'eee', 'rrr', 'ttt']
+# 传入列表副本: 禁止函数修改列表
+greet_users(_users[:])
+print(_users)
+# 直接传入: 函数可修改列表
+greet_users(_users)
+print(_users)
+
+```
+
+### 传递任意数量的实参
+
+#### 结合使用位置实参和任意数量实参
+
+```python
+# 传递任意数量的实参
+def any_args_function(*langs):
+    for lang in langs:
+        # 不换行! 参数之间用 \t 隔开
+        print(lang, end='\t')
+        # print(lang)
+
+# 传递了2个参数, 1个是列表, 1个是字典
+any_args_function(['Go', 'Java', 'C', 'C++', 'Python', 'PHP', 'TypeScript'], {'name': 'q', 'age': 19})
+# 传递了3个参数
+any_args_function('Go', 'Python', 'C++', 'C')
+```
+
+#### 使用任意数量的关键字实参
+
+```python
+# 使用任意数量的关键字实参
+def build_profile(first, last, **user_info):
+    profile = {'first_name': first, 'last_name': last}
+    for key, value in user_info.items():
+        profile[key] = value
+    return profile
+
+
+user_profile = build_profile('Gulf', 'Alaska', key1='value1', key2='value2')
+print(user_profile)
+```
+
+## 模块
+
+`import` 语句允许在当前运行的程序文件中使用模块中的代码。
+
+```python
+# 1.导入整个模块: module_name.function_name() ==> module_name.py - function_name()
+import packaeg_name.module_name
+
+module_name.function1()
+```
+
+```python
+# 2.导入模块中的函数: function_name()
+from packaeg_name.module_name import function1, function2
+
+flag = function1()
+area = function2()
+```
+
+```python
+# 3.使用 as 给函数指定别名
+from packaeg_name.module_name import function1 as fn
+fn()
+```
+
+```python
+# 4.使用 as 给模块指定别名
+import packaeg_name.module_name as _module
+_module.function1()
+```
+
+```python
+# 5.导入模块中的所有函数
+from modules_name import *
+function1()
+function2()
+```
+
+## 类
+
+**类中的实例函数形参都需要 `self` 变量**！
+
+### 定义和使用类
+
+```python
+# 定义类
+class iPhone:
+    def __init__(self, id, number, date):
+        self.id = id
+        self.number = number
+        self.date = date
+
+    def ringing(self):
+        print('Your iphone is ringing!')
+
+    def hang_on(self):
+        print('Hang on your phone..')
+
+
+class Person:
+    """构造函数"""
+
+    def __init__(self, name, age, sex):
+        self.name = name
+        self.age = age
+        self.sex = sex
+        self.my_iPhone = iPhone(1, 1183859291, '2022-03')
+
+    def say_hello(self, other_name):
+        print(self.name + ': Hello, ' + other_name)
+        self.my_iPhone.ringing()
+        self.my_iPhone.hang_on()
+
+
+person = Person('Gulf of Alaska', 19, 'F')
+person.say_hello('someone')
+print(person)  # <__main__.Person object at 0x000002086785EFD0>
+print(person.name)
+print(person.sex)
+print(person.age)
+```
+
+### 继承
+
+```python
+# 父类
+class Phone:
+    """构造函数"""
+
+    def __init__(self, id, number, date):
+        self.id = id
+        self.number = number
+        self.date = date
+
+    def ringing(self):
+        print(self.id + self.number)
+        print('Your phone is ringing!')
+
+    def hang_on(self):
+        print(self.date)
+        print('Hang on your phone..')
+
+
+# 子类: 继承 Phone 类
+class HuaWei(Phone):
+    def __init__(self):
+        """先初始化父类 (因为初始化父类后, 父类才能有属性, 子类才能继承)!!!"""
+        super(HuaWei, self).__init__(1, 119, 'now')
+        print('__init__')
+
+    def xiao_yi(self):
+        print('这里是小艺, 有什么能帮助你的吗?')
+
+    # 重写父类方法！
+    # def ringing(self):
+    #     print('HuaWei is ringing')
+    
+    # 重写父类方法！
+    # def hang_on(self):
+    #     print('hang on..')
+
+
+wd = HuaWei()
+wd.ringing()
+wd.hang_on()
+wd.xiao_yi()
+```
+
+### 导入类
+
+```python
+# 1.导入单个类
+from main import Math
+
+math = Math(2, 3)
+math.two_sum()
+
+# 2.从一个模块导入多个类(一个 .py 就是一个模块)
+from main import Math, Time
+
+# 3.导入整个模块
+import main
+
+myMath = main.Math(2,3)
+myMath.two_sum()
+
+# 4.导入模块中的所有类
+from main import *
+
+Math(1, 2).two_sum()
+
+```
+
+## 文件和异常
+
+### 文件读取
+
+- `open()` 返回一个文件对象，需要提供实参`文件路径`
+- `read()` 读取文件全部内容
+- `readline()` 读取单行
+- `readlines()` 读取文件的每一行，然后返回一个列表
+- 文件路径：Windows 使用反斜杠（\）而不是 Linux/OS X 的斜杠（/）
+
+```python
+# 读取文件
+with open('pi_digits.txt') as file_object:
+    contents = file_object.read()
+    print(contents)
+```
+
+```python
+filename = "my_modules/digits.txt"
+with open(filename) as file:
+    lines = file.readlines()
+str = ''
+for line in lines:
+    str += line.strip()
+
+print(str[:16] + '...')		# 3.14159265358979...
+print(len(str))
+```
+
+### 写入文件
+
+写入文件：调用 `open()` 时需要提供另一个实参，告诉 Python 你要以**写入模式**打开文件。
+
+```python
+# 写入文件
+filename = './test.txt'
+with open(filename, 'w') as file_obj:
+    file_obj.write('I love programming.')    
+```
+
+在这个示例中，调用 `open()` 提供了两个实参：
+
+- 第一个实参也是要打开的文件的名称
+- 第二个实参 `w` 告诉 Python，要以**写入模式**打开这个文件
+  - 读取模式 `r`
+  - 写入模式 `w`
+  - 附加模式 `a`
+  - 读取和写入文件的模式 `r+`
+  - 如果你省略了该实参，Python 将以默认的只读模式打开文件
+
+### 写入多行
+
+函数 `write()` 不会在你写入的文本末尾添加换行符！
+
+```python
+# 写入多行
+filename = 'my_modules/digits.txt'
+with open(filename, 'w') as file_obj:
+    file_obj.write('I love programming.')
+    file_obj.write('do you?!')
+
+# 函数 write() 不会在你写入的文本末尾添加换行符！
+# my_modules/digits.txt: I love programming.do you?!
+```
+
+### 追加文件内容
+
+如果你要给文件追加内容，而不是覆盖原有内容，可以**附加模式** `a` 打开文件。
+
+```python
+# 追加文件内容
+filename = 'my_modules/digits.txt'
+with open(filename, 'a') as file_obj:
+    file_obj.write('Yes! I love programming too.')
+```
+
+### 异常
+
+Python 使用被称为异常的特殊对象来管理程序执行期间发生的错误。
+
+异常使用 `try-except-else` 代码块处理，如果你未对异常进行处理，程序将显示 `traceback`，其中包含有关异常的报告。
+
+`try` 代码块中无异常则跳转到 `else` 代码块中，否则跳转到 `except` 中进行异常处理。
+
+#### 处理 `ZeroDivisionError` 异常
+
+```python
+# ZeroDivisionError
+try:
+    answer = 1 / 3
+except ZeroDivisionError:
+    print("You can't divide by zero!")
+else:
+    print(answer)
+```
+
+#### 处理 `FileNotFoundError` 异常
+
+```python
+# FileNotFoundError
+filename = 'Gulf.txt'
+try:
+    with open(filename, 'r') as file_obj:
+        print(file_obj.read())
+except FileNotFoundError:
+    print('We could not find the file..')
+else:
+    print('success reading.')
+```
+
+```python
+# 计算一个文件大概有几个单词, 未找到文件则提示
+def count_file_numbers(filename):
+    try:
+        with open(filename, 'r') as file_object:
+            file_contents = file_object.read()
+    except FileNotFoundError:
+        print('sorry, the file ' + filename + ' does not exist.')
+    else:
+        snippets = file_contents.split()
+        count = len(snippets)
+        print('the file ' + filename + ' has ' + str(count) + ' words.')
+
+
+count_file_numbers('pi_digits.txt')		# the file pi_digits.txt has 12 words.
+count_file_numbers('Gulf.txt')			# sorry, the file Gulf.txt does not exist.
+```
+
+### 存储数据
+
+使用 `json.dump()` 和 `json.load()` 存储和获取数据。
+
+```python
+# 导入Json库函数
+import json
+
+
+def remember(filename):
+    try:
+        with open(filename) as f_obj:
+            username = json.load(f_obj)
+    except FileNotFoundError:
+        username = input('Input your name, we will remember it! ')
+        with open(filename, 'w') as f_obj:
+            json.dump(username, f_obj)
+    else:
+        print("Welcome back, " + username + ' !')
+
+
+remember('username.json')
+```
+
+### 异常时一声不吭
+
+Python 有一个 `pass` 语句，可在代码块中使用它来让 Python 什么都不做。
+
+```python
+import json
+
+try:
+    with open('username.txt') as f_obj:
+        username = json.load(f_obj)
+except FileNotFoundError:
+    pass
+else:
+    print('success')
+```
+
+`pass` 充当了占位符的作用，提醒你某个地方什么都没做，并且以后也需要在这里做点什么。
+
+## 测试
+
+### 测试用例
+
+测试类必须继承 `unittest.TestCase` 类，这样 Python 才知道如何运行你编写的测试。
+
+注意：测试函数必须以 `test_` 打头，否则不会被执行。
+
+```python
+# 测试
+import unittest
+from name_function import Name
+
+
+class TestCase(unittest.TestCase):
+    # 必须以 test_ 打头, 这样运行 unittest.main() 才会执行 test_first_last_name() 测试函数
+    def test_first_last_name(self):
+        name = Name().get_name('Gulf', 'Alaska')
+        self.assertEqual('Gulf  Alaska', name)
+
+
+unittest.main()
+```
+
+运行 `unittest.main()` 的测试结果：
+
+```python
+F
+======================================================================
+FAIL: test_fist_last_name (__main__.TestCase)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "D:\xxx\PyCharm\pythonProject\www.py", line 588, in test_fist_last_name
+    self.assertEqual('Gulf  Alaska', name)
+AssertionError: 'Gulf  Alaska' != 'Gulf Alaska'
+- Gulf  Alaska
+?     -
++ Gulf Alaska
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.001s
+
+FAILED (failures=1)
+```
+
+### 测试类
+
+各种断言方法：
+
+- `assertEqual(a, b)`
+- `assertNotEqual(a, b)`
+- `assertTrue(x)`
+- `assertFalse(x)`
+- `assertIn(item, list)`
+- `assertNotIn(item, list)`
+
+方法 `setUp()` 初始化测试对象：
+
+```python
+import unittest
+from name_function import Name
+
+
+class TestCase(unittest.TestCase):
+    # 初始化测试实例
+    def setUp(self):
+        self.toTestName = Name()
+
+    # 必须以 test_ 打头, 这样运行 unittest.main() 才会执行 test_first_last_name() 测试函数
+    def test_first_last_name(self):
+        name = self.toTestName.get_name('Gulf', 'Alaska')
+        self.assertEqual('Gulf Alaska', name)
+
+
+unittest.main()
+```
+
+## 更多
+
+[Python 手册](https://www.runoob.com/python/python-tutorial.html)

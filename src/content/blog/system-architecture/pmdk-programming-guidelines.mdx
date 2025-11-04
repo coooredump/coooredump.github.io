@@ -1,0 +1,324 @@
+---
+title: PMDK Programming Guidelines
+description: 在使用 libpmemobj 库时，不需要直接使用 mmap。libpmemobj 提供了高级的 API 来管理持久内存池和分配内存。mmap 通常用于更底层的内存映射操作，而 libpmemobj 封装了这些操作，使得管理持久内存更加方便和安全。
+publishDate: 2024-12-28
+tags: [系统与体系结构]
+heroImage: { src: ../_img/202501222348546.png }
+language: Chinese
+comment: true
+draft: false
+---
+
+## libpmemobj
+
+在使用 `libpmemobj` 库时，不需要直接使用 `mmap`。`libpmemobj` 提供了高级的 API 来管理持久内存池和分配内存。`mmap` 通常用于更底层的内存映射操作，而 `libpmemobj` 封装了这些操作，使得管理持久内存更加方便和安全。
+
+```cpp
+#include <libpmemobj.h>
+#include <iostream>
+#include <cassert>
+#include <cstring>
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+void init_pmem() {
+    // create pool
+    const char *pool_name = "/mnt/pmem0/matianmao/fast_fair.data";
+    const char *layout_name = "fast_fair";
+    size_t pool_size = 64LL * 1024 * 1024 * 1024; // 16GB
+
+    if (access(pool_name, 0)) {
+        pmem_pool = pmemobj_create(pool_name, layout_name, pool_size, 0666);
+        if (pmem_pool == nullptr) {
+            std::cout << "[FAST FAIR]\tcreate fail\n";
+            assert(0);
+        }
+        std::cout << "[FAST FAIR]\tcreate\n";
+    } else {
+        pmem_pool = pmemobj_open(pool_name, layout_name);
+        std::cout << "[FAST FAIR]\topen\n";
+    }
+    std::cout << "[FAST FAIR]\topen pmem pool successfully\n";
+}
+
+// 函数通过 pmemobj_zalloc 从持久内存池中分配指定大小的内存，并返回分配的内存地址
+// 如果分配失败，输出错误信息并终止程序
+void *allocate(size_t size) {
+    // 用于存储分配的内存地址
+    void *addr;
+    // 用于存储持久内存对象的标识符
+    PMEMoid ptr;
+    // 调用 pmemobj_zalloc 函数从持久内存池 pmem_pool 中分配大小为 size 字节的内存，并将分配的内存对象标识符存储在 ptr 中
+    int ret = pmemobj_zalloc(pmem_pool, &ptr, sizeof(char) * size, TOID_TYPE_NUM(char));
+    if (ret) {
+        std::cout << "[FAST FAIR]\tallocate btree successfully\n";
+        assert(0);
+    }
+    // 将持久内存对象标识符 ptr 转换为直接指针，并将其存储在 addr 中
+    addr = (char *)pmemobj_direct(ptr);
+    // 返回分配的内存地址
+    return addr;
+}
+```
+
+1️⃣ 使用 `libpmemobj` 库函数读写持久内存的示例代码 ***libpmemobj_pmem.cpp***（without mmap —— 封装📦好了）：
+
+```cpp
+#include <libpmemobj.h>
+#include <iostream>
+#include <cassert>
+#include <cstring>
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+// 持久内存池的全局变量
+PMEMobjpool *pmem_pool;
+
+// 定义持久对象的类型编号
+#define TOID_TYPE_NUM_CHAR 1
+
+// 初始化持久内存池
+void init_pmem() {
+    // 持久内存池的名称和布局名称
+    const char *pool_name = "/mnt/pmem1/libpmemobj_pmem";
+    const char *layout_name = "fast_fair";
+    // 持久内存池的大小（16GB）
+    size_t pool_size = 16LL * 1024 * 1024 * 1024;
+
+    // 检查持久内存池文件是否存在
+    if (access(pool_name, 0)) {
+        // 创建持久内存池
+        pmem_pool = pmemobj_create(pool_name, layout_name, pool_size, 0666);
+        if (pmem_pool == nullptr) {
+            std::cout << "[FAST FAIR]\tcreate fail\n";
+            assert(0);
+        }
+        std::cout << "[FAST FAIR]\tcreate\n";
+    } else {
+        // 打开持久内存池
+        pmem_pool = pmemobj_open(pool_name, layout_name);
+        if (pmem_pool == nullptr) {
+            std::cout << "[FAST FAIR]\topen fail\n";
+            assert(0);
+        }
+        std::cout << "[FAST FAIR]\topen\n";
+    }
+    std::cout << "[FAST FAIR]\topen pmem pool successfully\n";
+}
+
+// 分配指定大小的持久内存，并返回分配的内存地址
+void *allocate(size_t size) {
+    // 用于存储分配的内存地址
+    void *addr;
+    // 用于存储持久内存对象的标识符
+    PMEMoid ptr;
+    // 调用 pmemobj_zalloc 函数从持久内存池 pmem_pool 中分配大小为 size 字节的内存，并将分配的内存对象标识符存储在 ptr 中
+    int ret = pmemobj_zalloc(pmem_pool, &ptr, sizeof(char) * size, TOID_TYPE_NUM_CHAR);
+    if (ret) {
+        std::cout << "[FAST FAIR]\tallocate fail\n";
+        assert(0);
+    }
+    // 将持久内存对象标识符 ptr 转换为直接指针，并将其存储在 addr 中
+    addr = pmemobj_direct(ptr);
+    // 返回分配的内存地址
+    return addr;
+}
+
+int main() {
+    // 初始化持久内存池
+    init_pmem();
+
+    // 分配 1024 字节的持久内存
+    void *pmem_addr = allocate(1024);
+    std::cout << "[FAST FAIR]\tallocated 1024 bytes at " << pmem_addr << "\n";
+
+    // 使用分配的持久内存（例如，写入数据）
+    strcpy((char *)pmem_addr, "Hello, Persistent Memory!");
+    std::cout << "[FAST FAIR]\tdata written: " << (char *)pmem_addr << "\n";
+
+    // 关闭持久内存池
+    pmemobj_close(pmem_pool);
+    std::cout << "[FAST FAIR]\tpmem pool closed\n";
+
+    return 0;
+}
+```
+
+编译命令：
+
+```sh
+$ g++ -o libpmemobj libpmemobj_pmem.cpp -lpmemobj
+$ ./libpmemobj
+```
+
+## mmap
+
+2️⃣ 如果不使用 `libpmemobj` 库函数来读写持久内存（PM），你可以直接使用 `mmap` 函数将持久内存映射到虚拟地址空间，然后通过指针操作进行读写。以下是一个示例代码 ***mmap_pmem.cpp***，展示了如何使用 `mmap` 来读写持久内存：
+
+```cpp
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <iostream>
+#include <cstring>
+#include <cassert>
+
+#define PMEM_FILE_PATH "/mnt/pmem1/mmap_pmem"
+#define PMEM_FILE_SIZE (16LL * 1024 * 1024 * 1024) // 16GB
+
+void* pmem_addr = nullptr;
+int pmem_fd = -1;
+
+// 初始化持久内存
+void init_pmem() {
+    // 打开或创建持久内存文件
+    pmem_fd = open(PMEM_FILE_PATH, O_RDWR | O_CREAT, 0666);
+    if (pmem_fd < 0) {
+        std::cerr << "Failed to open or create PMEM file" << std::endl;
+        exit(1);
+    }
+
+    // 设置文件大小
+    if (ftruncate(pmem_fd, PMEM_FILE_SIZE) != 0) {
+        std::cerr << "Failed to set PMEM file size" << std::endl;
+        close(pmem_fd);
+        exit(1);
+    }
+
+    // 将文件映射到内存
+    pmem_addr = mmap(nullptr, PMEM_FILE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, pmem_fd, 0);
+    if (pmem_addr == MAP_FAILED) {
+        std::cerr << "Failed to mmap PMEM file" << std::endl;
+        close(pmem_fd);
+        exit(1);
+    }
+
+    std::cout << "PMEM initialized successfully" << std::endl;
+}
+
+// 关闭持久内存
+void close_pmem() {
+    if (pmem_addr != nullptr) {
+        munmap(pmem_addr, PMEM_FILE_SIZE);
+        pmem_addr = nullptr;
+    }
+    if (pmem_fd >= 0) {
+        close(pmem_fd);
+        pmem_fd = -1;
+    }
+    std::cout << "PMEM closed successfully" << std::endl;
+}
+
+int main() {
+    // 初始化持久内存
+    init_pmem();
+
+    // 分配 1024 字节的持久内存
+    void* data_addr = static_cast<char*>(pmem_addr) + 1024;
+    std::cout << "Allocated 1024 bytes at " << data_addr << std::endl;
+
+    // 使用分配的持久内存（例如，写入数据）
+    strcpy(static_cast<char*>(data_addr), "Hello, Persistent Memory!");
+    std::cout << "Data written: " << static_cast<char*>(data_addr) << std::endl;
+
+    // 关闭持久内存
+    close_pmem();
+
+    return 0;
+}
+```
+
+## pmem_map_file
+
+3️⃣ 调用 `pmem_map_file` 函数来映射 PM，`pmem_map_file` 是 `libpmem` 库中的一个函数，用于将持久内存文件映射到虚拟地址空间。示例代码 ***pmem.c*** 如下：
+
+```cpp
+#include <fcntl.h>      // for open, O_RDWR, O_CREAT, O_TRUNC
+#include <unistd.h>     // for close, ftruncate
+#include <sys/types.h>  // for types
+#include <sys/stat.h>   // for ftruncate
+#include <libpmem.h>    // for PMDK functions
+#include <stdio.h>
+#include <stdlib.h>
+
+#define PMEM_SIZE 1024
+#define PMEM_FILE "/mnt/pmem1/pmem_file"
+
+int main() {
+    // 创建持久内存文件
+    int fd = open(PMEM_FILE, O_RDWR | O_CREAT | O_TRUNC, 0666);
+    if (fd < 0) {
+        perror("open");
+        return EXIT_FAILURE;
+    }
+    ftruncate(fd, PMEM_SIZE);
+
+    // 映射持久内存
+    void *pmem_addr = pmem_map_file(PMEM_FILE, PMEM_SIZE, PMEM_FILE_CREATE, 0666, NULL, NULL);
+    if (pmem_addr == NULL) {
+        perror("pmem_map_file");
+        return EXIT_FAILURE;
+    }
+
+    // 写入数据
+    sprintf(pmem_addr, "Hello, Persistent Memory!");
+
+    // 刷新持久内存
+    pmem_persist(pmem_addr, PMEM_SIZE);
+
+    // 读取数据
+    printf("%s\n", (char *)pmem_addr);
+
+    // 清理
+    pmem_unmap(pmem_addr, PMEM_SIZE);
+    close(fd);
+    return EXIT_SUCCESS;
+}
+```
+
+`pmem_map_file` 底层封装的也是 `mmap`，以下是 `pmem_map_file` 实现的一个简化示例，具体实现可能会有所不同：
+
+> pmdk/src/libpmem/pmem.c 代码库中对 `pmem_map_file` 的定义 -- **create or open the file and map it to memory**
+
+```cpp
+#include <libpmem.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdio.h>
+
+void *pmem_map_file(const char *path, size_t len, int flags, mode_t mode, size_t *mapped_lenp, int *is_pmemp) {
+    int fd = open(path, flags, mode);
+    if (fd < 0) {
+        perror("open");
+        return NULL;
+    }
+
+    if (len == 0) {
+        len = lseek(fd, 0, SEEK_END);
+        if (len == (size_t)-1) {
+            perror("lseek");
+            close(fd);
+            return NULL;
+        }
+    }
+
+    void *addr = mmap(NULL, len, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (addr == MAP_FAILED) {
+        perror("mmap");
+        close(fd);
+        return NULL;
+    }
+
+    close(fd);
+
+    if (mapped_lenp)
+        *mapped_lenp = len;
+    if (is_pmemp)
+        *is_pmemp = 1; // Simplified, actual implementation may check if it's true PMEM
+
+    return addr;
+}
+```

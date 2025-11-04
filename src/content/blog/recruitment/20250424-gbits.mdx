@@ -1,0 +1,330 @@
+---
+title: 2025.04.24 吉比特笔试题
+description: 吉比特 20250424 笔试解析
+publishDate: 2025-04-24
+tags: [秋招指南]
+heroImage: { src: ../_img/20250810-yTVVig.png }
+language: Chinese
+comment: true
+draft: false
+---
+
+## 1. 数组查询
+
+给定一个数组 `a[n]`，以及 `q` 次查询 `(l, r)`，输出 `a[l] - a[l+1] - a[l+2] - ... - a[r-1] - a[r]` 的值。
+
+> 输入描述
+
+- 第一行包含两个整数 `n` 和 `q`，表示数组的长度和查询的次数。
+- 第二行包含 `n` 个整数，表示数组 `a`。
+- 接下来的 `q` 行，每行包含两个整数 `l` 和 `r`，表示查询的区间（假设数组下标从 1 开始）。
+
+> 输出描述
+
+- 对于每个查询，输出一个整数，表示对应的计算结果。
+
+> 示例 1
+
+输入：
+
+```
+5 3
+1 2 3 4 5
+1 5
+2 4
+3 3
+```
+输出：
+```
+-13
+-5
+3
+```
+解释：
+- 第一个查询：$1 - 2 - 3 - 4 - 5 = -13$
+- 第二个查询：$2 - 3 - 4 = -5$
+- 第三个查询：$3$
+
+> 代码：模拟 / 前缀和
+
+直接按照题目要求计算即可。对于每个查询 `(l, r)`，从 `a[l]` 开始，依次减去 `a[l+1]` 到 `a[r]` 的值。时间复杂度为 $O(q * n)$，在 `n` 和 `q` 较小的情况下可以通过。
+
+优化思路：可以预处理前缀和数组 `prefix`，其中 `prefix[i]` 表示 `a[1] - a[2] - ... - a[i]`。然后对于查询 `(l, r)`，结果为：
+- 如果 `l == 1`，直接取 `prefix[r]`。
+- 否则，结果为 `a[l] - (prefix[r] - prefix[l])`。
+
+```cpp
+#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    int n, q;
+    cin >> n >> q;
+    vector<int> a(n + 1);
+    vector<int> prefix(n + 1, 0);
+    
+    for (int i = 1; i <= n; ++i) {
+        cin >> a[i];
+        if (i == 1) {
+            prefix[i] = a[i];
+        } else {
+            prefix[i] = prefix[i - 1] - a[i];
+        }
+    }
+
+    while (q--) {
+        int l, r;
+        cin >> l >> r;
+        if (l == 1) {
+            cout << prefix[r] << endl;
+        } else {
+            cout << a[l] - (prefix[r] - prefix[l]) << endl;
+        }
+    }
+    return 0;
+}
+```
+
+## 2. 多米诺骨牌推倒
+
+给定一排多米诺骨牌，每个骨牌有一个数值。每次操作可以选择一个位置和一个方向（左或右）进行推倒。推倒的规则是：
+- 如果相邻骨牌（根据方向）的数值比当前骨牌的数值小，则会被推倒，并继续向该方向传播，直到遇到不小于当前骨牌数值的骨牌为止。
+- 问最少需要多少次操作才能将所有骨牌都推倒。
+
+> 输入描述
+
+- 第一行包含一个整数 `n`，表示骨牌的数量。
+- 第二行包含 `n` 个整数，表示每个骨牌的数值。
+
+> 输出描述
+
+- 输出一个整数，表示最少需要的操作次数。
+
+> 示例 1
+
+输入：
+
+```
+5
+3 1 2 4 1
+```
+输出：
+```
+3
+```
+解释：
+- 第一次操作：选择 4，向右推倒，可以推倒 1（因为 1 < 4）
+- 第二次操作：选择 3，向右推倒，可以推倒位置 1
+- 第二次操作：选择 2 推倒
+
+> 代码：转化为区间覆盖问题
+>
+> - 后半部分代码参考 LC [45. 跳跃游戏 II](https://leetcode.cn/problems/jump-game-ii/)
+
+这个问题是一个**链式反应模拟 + 贪心优化**问题。目标是最小化推动次数，使得所有积木都被推倒。
+
+我们可以对问题进行如下处理：
+
+1. **模拟倒塌过程**（从某个位置向左或向右传递）；
+2. **预处理每个积木从左或右可以推倒的“影响范围”**；
+3. **贪心策略**：用最少的“倒塌段”覆盖所有积木（区间覆盖）。
+
+步骤详解：
+
+- Step 1：预处理每个积木向左/右能影响多远
+
+    - 对于每个位置 `i`：
+        - 向右倒：不断检查 `A[i+1] < A[i]`, `A[i+2] < A[i+1]`... 直到不满足，记录影响区间 `R[i]`；
+        - 向左倒：不断检查 `A[i-1] < A[i]`, `A[i-2] < A[i-1]`... 类似，记录影响区间 `L[i]`。
+
+- Step 2：把每个可能的倒塌行为看作一个“区间”覆盖
+
+    - 从 `i` 向右能推倒到 `j`，我们记录一个区间 `[i, j]`
+
+    - 从 `i` 向左能推倒到 `k`，我们记录一个区间 `[k, i]`
+    - 总共会有 `2n` 个这样的区间。
+
+- Step 3：用最少的这些区间覆盖整个 `[1, n]`
+
+这个就是经典的 **区间覆盖问题**：
+
+- 将所有区间按起点排序；
+- 每次选择起点 ≤ 当前覆盖末尾，终点最大的区间；
+- 如果无法延伸则失败；
+- 否则计数操作次数，直到覆盖整个 `[1, n]`
+
+```cpp
+#include <iostream>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+int main() {
+    int n;
+    cin >> n;
+    vector<int> A(n + 2);  // 1-based indexing, pad for safety
+    for (int i = 1; i <= n; ++i) {
+        cin >> A[i];
+    }
+
+    vector<pair<int, int>> intervals;
+
+    // 向右推
+    for (int i = 1; i <= n; ++i) {
+        int j = i;
+        while (j + 1 <= n && A[j + 1] < A[j]) {
+            ++j;
+        }
+        intervals.emplace_back(i, j);
+    }
+
+    // 向左推
+    for (int i = 1; i <= n; ++i) {
+        int j = i;
+        while (j - 1 >= 1 && A[j - 1] < A[j]) {
+            --j;
+        }
+        intervals.emplace_back(j, i);
+    }
+
+    // 贪心区间覆盖 [1, n]
+    sort(intervals.begin(), intervals.end());
+
+    int res = 0, end = 0, next_end = 0, idx = 0;
+    while (end < n) {
+        while (idx < intervals.size() && intervals[idx].first <= end + 1) {
+            next_end = max(next_end, intervals[idx].second);
+            ++idx;
+        }
+        if (next_end == end) {
+            cout << -1 << endl;  // 理论上不会出现
+            return 0;
+        }
+        end = next_end;
+        ++res;
+    }
+
+    cout << res << endl;
+    return 0;
+}
+```
+
+## 3. 绳子分割与多边形面积
+
+牛牛小朋友和他的朋友们，一共 $n$ 个人在操场上玩一个圈地盘的游戏。 这个游戏的规则是这样的，将一根的绳子剪成 $n$ 段， 让每个小朋友都能有一小段绳子。 每个小朋友用拿到的一小段绳子分别圈地，要求绳子头尾相接（头尾相接时产生的损耗忽略不计），并且第 $i$ 个小朋友要求他用绳子在地上圈起来的地盘是 $a_i$ 边形的（有些小朋友对他圈起来的地盘是什么形状的并不关心，用 $-1$ 表示）。
+
+小朋友们只能找到一根长度为 $l$ 的绳子，需要把绳子剪开之后，所有小朋友可以圈出地盘的面积的**最小值为 $s$**。为了让小朋友们尽可能高兴，需牛牛要一种剪绳子的方法，**让 $s$ 尽可能大**。你能帮助牛牛解决这个问题吗？你只需要精确到小数点后 6 位即可（和标准答案相对误差低于 $1e^{-5}$ 则被判定为正确）。 
+
+> 输入描述
+
+- 第一行包含两个整数 `l` 和 `n`。
+- 第二行包含 `n` 个整数，表示数组 `a`。
+
+> 输出格式
+
+- 输出一个浮点数，表示面积最小值的最大可能值，保留足够的小数位数。
+
+> 示例 1
+
+输入：
+
+```
+10 2
+4 -1
+```
+输出：
+```
+2.5
+```
+> 代码
+
+这个问题可以转化为 **二分答案 + 几何判断** 的问题：
+
+核心思想：
+
+- **目标**：将长度为 `l` 的绳子分成 `n` 段，使得所有小朋友围成的图形的面积的**最小值最大化**。
+- **限制条件**：
+    - 每个小朋友的形状是一个正多边形，边数为 `a_i`（若为 `-1`，代表形状不限制，可以视为正圆）。
+    - 总绳长为 `l`。
+- 我们用 **二分搜索** 来猜测最小的面积 `s`，然后验证是否可以在绳长为 `l` 的情况下满足每个人的要求。
+
+面积计算公式：
+
+- 对于边数为 `k` 的正多边形，边长为 `x / k`，周长为 `x`，面积为：
+
+$$
+A = \frac{k}{4} \cdot x^2 \cdot \cot\left(\frac{\pi}{k}\right)
+$$
+
+
+
+- 如果是圆（`a_i == -1`），设周长为 `x`，则半径 `r = x / (2π)`，面积为：
+
+$$
+A = \pi \cdot \left(\frac{x}{2\pi}\right)^2 = \frac{x^2}{4\pi}
+$$
+
+
+
+给定一个猜测的最小面积 `s`，我们尝试为每个小朋友分配一段最短绳长，使得他能围成面积至少为 `s`，然后计算所有这些最短绳长的和是否不超过 `l`。
+
+```cpp
+#include <vector>
+#include <algorithm>
+#include <cmath>
+#include <iomanip>
+
+using namespace std;
+
+const double PI = acos(-1.0);
+const double EPS = 1e-7;
+
+int n;
+double l;
+vector<int> a;
+
+double get_min_len(int k, double s) {
+    if (k == -1) { // Circle
+        return sqrt(4 * PI * s);
+    } else {
+        double tan_val = tan(PI / k);
+        double coeff = k / (4 * tan_val); // cotangent = 1 / tan
+        return sqrt(s / coeff);
+    }
+}
+
+bool check(double s) {
+    double total_len = 0;
+    for (int i = 0; i < n; ++i) {
+        double min_len = get_min_len(a[i], s);
+        total_len += min_len;
+        if (total_len > l)
+            return false;
+    }
+    return true;
+}
+
+int main() {
+    cin >> n >> l;
+    a.resize(n);
+    for (int i = 0; i < n; ++i) {
+        cin >> a[i];
+    }
+
+    double left = 0, right = 1e18; // Upper bound high enough
+//    while (right - left > EPS)
+    for (int iter = 0; iter < 100; ++iter) { // binary search
+        double mid = (left + right) / 2;
+        if (check(mid)) {
+            left = mid;
+        } else {
+            right = mid;
+        }
+    }
+
+    cout << fixed << setprecision(6) << left << endl;
+    return 0;
+}
+```
