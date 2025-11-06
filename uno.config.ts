@@ -36,22 +36,23 @@ const typographyConfig = {
       position: 'relative',
       overflow: 'hidden',
       'border-width': '1px',
-      'border-left': 'inherit',
+      // 'border-left': 'inherit',
       'border-radius': 'var(--radius)',
       'padding-inline': '1.6rem',
-      'box-shadow': '0 5px 0 ' + bgMuted,
-      ...(typographyCustom.blockquoteStyle === 'normal' && { 'font-style': 'normal' })
+      // 'box-shadow': '0 5px 0 ' + bgMuted,
+      // ...(typographyCustom.blockquoteStyle === 'normal' && { 'font-style': 'normal' }),
+      'font-style': 'normal',
+      'font-family': 'consolaslxgw',
     },
     'blockquote::after': {
       color: fgMuted,
       position: 'absolute',
       content: '"”"',
-      top: '2.6rem',
-      right: '-1.4rem',
+      top: '3.5rem',
+      right: '0.5rem',
       'font-size': '10rem',
-      'font-family':
-        '"Trebuchet MS", "Lucida Sans Unicode", "Lucida Grande", "Lucida Sans", Arial, sans-serif',
-      transform: 'rotate(-15deg)',
+      'font-family': '"Trebuchet MS", "Lucida Sans Unicode", "Lucida Grande", Arial, sans-serif',
+      transform: 'rotate(0deg)',
       opacity: '0.1'
     },
     // Table
