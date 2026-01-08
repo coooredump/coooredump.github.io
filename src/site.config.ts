@@ -3,9 +3,9 @@ import type { CardListData, Config, IntegrationUserConfig, ThemeUserConfig } fro
 export const theme: ThemeUserConfig = {
   // === Basic configuration ===
   /** Title for your website. Will be used in metadata and as browser tab title. */
-  title: 'Coredump',
+  title: 'Core',
   /** Will be used in index page & copyright declaration */
-  author: 'w',
+  author: 'Coredump',
   /** Description metadata for your website. Can be used in page metadata. */
   description: '当打之年',
   /** The default favicon for your site which should be a path to an image in the `public/` directory. */
@@ -88,6 +88,9 @@ export const theme: ThemeUserConfig = {
       zhihu: "https://www.zhihu.com/people/JayChou",
       email: "mailto:wuyikun@stu.xmu.edu.cn",
       netease: "https://music.163.com/#/user/home?id=1479129382",
+      tiktok: 'https://www.douyin.com/user/MS4wLjABAAAAzWc63J3lkEwARMZWBU39myy7MtgZj81ZkrI06Bt3TWKsM2SikoTWYRH12iCYJxJ6',
+      weibo: 'https://weibo.com/u/7320866025',
+      steam: 'https://steamcommunity.com/id/wu-yikun/',
       bilibili: "https://space.bilibili.com/441384986",
       // tiktok: "https://www.douyin.com/user/MS4wLjABAAAAzWc63J3lkEwARMZWBU39myy7MtgZj81ZkrI06Bt3TWKsM2SikoTWYRH12iCYJxJ6",
     }
