@@ -1,0 +1,28 @@
+---
+import { CardList } from 'astro-pure/user'
+interface Props {
+  title: string
+  items: string[]
+  collapse?: boolean
+  class?: string
+  style?: string | Record<string, string>
+}
+
+const { title, items, collapse = true, class: className, ...props } = Astro.props as Props
+
+const list = items.map((item) => ({ title: item }))
+const rootClass = ['about-list', className].filter(Boolean).join(' ')
+---
+
+<CardList title={title} list={list} collapse={collapse} class={rootClass} {...props} />
+
+<style>
+  :global(.about-list ul) {
+    list-style: disc;
+    padding-left: 1.25rem;
+  }
+
+  :global(.about-list .expand-title) {
+    background-color: inherit !important;
+  }
+</style>

@@ -32,8 +32,10 @@ export const SocialLinksSchema = () =>
           steam: 'Steam',
           bilibili: 'Bilibili',
           zhihu: 'Zhihu',
+          juejin: 'Juejin',
           coolapk: 'Coolapk',
-          netease: 'NetEase'
+          netease: 'NetEase',
+          leetcode: 'LeetCode'
         }[key]
         labelledLinks[key] = { label, url }
       }

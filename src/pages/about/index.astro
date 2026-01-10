@@ -1,72 +1,555 @@
 ---
-import { Button, Collapse, Spoiler, Timeline } from 'astro-pure/user'
+import { Aside, Card, TabItem, Tabs, Timeline } from 'astro-pure/user'
 import PageLayout from '@/layouts/CommonPage.astro'
+import List from '@/components/about/List.astro'
 import Substats from '@/components/about/Substats.astro'
 import ToolSection from '@/components/about/ToolSection.astro'
 
 const headings = [
-  { depth: 2, slug: 'hobbies', text: 'Hobbies' },
+  { depth: 2, slug: 'coredump', text: 'Coredump' },
+  { depth: 2, slug: 'education', text: 'Education' },
+  { depth: 2, slug: 'experience', text: 'Experience' },
   { depth: 2, slug: 'tools', text: 'Tools' },
-  { depth: 2, slug: 'social-networks', text: 'Social Networks' },
-  { depth: 2, slug: 'gossips', text: 'Gossips' },
-  { depth: 2, slug: 'about-blog', text: 'About Blog' }
+  { depth: 2, slug: 'social-networks', text: 'Social Networks' }
 ]
 ---
 
+{/* About me */}
 <PageLayout title='About' {headings} comment>
-  <p>Developer / Designer</p>
+  <p>Developer / Photographer</p>
   <p>
-    Lorem ipsum dolor sit amet, vidit suscipit at mei. Quem denique mea id. Usu ei regione indoctum
-    dissentiunt, cu meliore fuisset mei, vel quod voluptua ne. Ex dicat impedit mel, at eum oratio
-    possit voluptatum.
+    I am an M.S. student in the Department of Software Engineering at the School of Informatics,
+    Xiamen University. My research interests include data deduplication and storage system.
   </p>
-  <p>
-    My motto: Stay hungry, Stay foolish. <Spoiler>这里可以夹私货，比如为什么要演奏春日影！</Spoiler>
-  </p>
-  <Button title='Sponsor Me' class='w-fit' href='/projects#sponsorship' variant='ahead' />
 
-  {/* general-talk */}
-  <h2 id='hobbies'>Hobbies</h2>
-  <ul>
-    <li>Lorem ipsum dolor sit amet, vidit suscipit at mei.</li>
-    <li>
-      Quem denique mea id. Usu ei regione indoctum dissentiunt, cu meliore fuisset mei, vel quod
-      voluptua ne.
-    </li>
-    <li>Ex dicat impedit mel, at eum oratio possit voluptatum.</li>
-    <li>Impetus fuisset ullamcorper pri cu, his posse iisque ad, aliquam honestatis usu id.</li>
-  </ul>
+  {/* Coredump */}
+  <h2 id='Coredump'>Coredump</h2>
 
-  {/* tools */}
+  <Tabs>
+    {/* Tourism */}
+    <TabItem label='Tourism'>
+      <p>
+        中学的时候喜欢看意林之类的杂志，里面的作者用乱七八糟的理由跑去旅游，然后说“阻碍你脚步的永远只有逃离的勇气和对生活的热爱”。
+      </p>
+      <p>我觉得太对了，可惜 12306 付款方式里没有勇气和热爱，不知道是不是下了盗版。</p>
+      <Timeline
+        events={[
+          {
+            date: '2025.06.14',
+            content:
+              '<a href="http://coooredump.github.io/blog/photography/fuzhou_2025-06-14">福建 · 福州</a>'
+          },
+          {
+            date: '2024.11.29',
+            content:
+              '<a href="http://coooredump.github.io/blog/photography/guangzhou_2024-11-29">广东 · 广州</a>'
+          },
+          {
+            date: '2024.10.30',
+            content:
+              '<a href="http://coooredump.github.io/blog/photography/dongshandao_2024-10-30">福建 · 漳州 · 东山岛</a>'
+          },
+          {
+            date: '2024.10.01',
+            content:
+              '<a href="http://coooredump.github.io/blog/photography/fuzhou_2024-10-01">福建 · 福州</a>'
+          },
+          {
+            date: '2024.07.27',
+            content:
+              '<a href="http://coooredump.github.io/blog/photography/yinchuan_2024-07-27">宁夏 · 银川</a>'
+          },
+          {
+            date: '2024.07.14',
+            content:
+              '<a href="http://coooredump.github.io/blog/photography/chengdu_2024-07-14">四川 · 成都</a>'
+          },
+          {
+            date: '2024.06.24',
+            content:
+              '<a href="https://coooredump.github.io/blog/photography/xian_2024-06-24/">陕西 · 西安</a>'
+          },
+          {
+            date: '2024.06.15',
+            content:
+              '<a href="http://coooredump.github.io/blog/photography/hangzhou_2024-06-15">浙江 · 杭州</a>'
+          },
+          {
+            date: '2024.05.01',
+            content:
+              '<a href="http://coooredump.github.io/blog/photography/zhangzhou_2024-05-01">福建 · 漳州 · 南靖土楼</a>'
+          },
+          {
+            date: '2024.01.28',
+            content:
+              '<a href="http://coooredump.github.io/blog/photography/quanzhou_2024-01-28">福建 · 泉州</a>'
+          },
+          {
+            date: '2023.12.24',
+            content:
+              '<a href="http://coooredump.github.io/blog/photography/xiamen_2023-12-24">福建 · 厦门</a>'
+          },
+          {
+            date: '2023.10.27',
+            content:
+              '<a href="http://coooredump.github.io/blog/photography/shenzhen_2023-10-27">广东 · 深圳</a>'
+          },
+          {
+            date: '2023.06.14',
+            content:
+              '<a href="http://coooredump.github.io/blog/photography/fjnu_2023-06-14">福建 · 福州 · 毕业季</a>'
+          },
+          {
+            date: '2023.04.28',
+            content:
+              '<a href="http://coooredump.github.io/blog/photography/hangzhou_2023-04-28">浙江 · 杭州</a>'
+          },
+          {
+            date: '2023.04.04',
+            content:
+              '<a href="http://coooredump.github.io/blog/photography/wuhan_2023-04-04">湖北 · 武汉</a>'
+          }
+        ]}
+      />
+    </TabItem>
+
+    {/* Music */}
+    <TabItem label='Music'>
+      <p>热爱音乐，喜欢华语、粤语、民谣，尤其是 Jay Chou、Eason 与 Taylor Swift 歌手</p>
+      <img src='https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202506281105405.png' />
+    </TabItem>
+
+    {/* Book */}
+    <TabItem label='Book'>
+      <div class='grid gap-4 sm:grid-cols-2'>
+        <List
+          title='已完成'
+          items={[
+            '《悉达多》',
+            '《被讨厌的勇气》',
+            '《恋爱必修课》',
+            '《分布式系统概念与设计》',
+            '《深入浅出SSD》',
+            '《穷爸爸与富爸爸》',
+            '《小懒财富自由之路》',
+            '《小狗钱钱》',
+            '《MySQL 必知必会》',
+            '《现代操作系统》',
+            '《计算机网络自顶向下方法》',
+            '《LINUX 私房菜》'
+          ]}
+          collapse
+        />
+        <List
+          title='未完成'
+          items={[
+            '《高效 C/C++ 调试》',
+            '《Linux 系统编程手册》',
+            '《操作系统 原理与实现》',
+            '《操作系统导论》',
+            '《还原操作系统真象》',
+            '《穿越操作系统迷雾》',
+            '《计算机体系结构量化研究方法》',
+            '《C++ Primer》',
+            '《C++20 高级编程》',
+            '《STL 源码剖析》',
+            '《图解 TCP/IP》',
+            '《图解机器学习》',
+            '《图解深度学习》',
+            '《深度学习》',
+            '《机器学习》',
+            '《机器学习数学原理》',
+            '《Effective C++》',
+            '《设计数据密集型应用》',
+            '《高性能 MySQL》',
+            '《编码 隐匿在计算机软硬件背后的语言》',
+            '《我与人间 闲话片刻》',
+            '《红书》',
+            '《罪与罚》',
+            '《文城》',
+            '《兄弟》',
+            '《许三观卖血记》',
+            '《焦虑的人》',
+            '《我的阿勒泰》',
+            '《阿勒泰的角落》',
+            '《乌合之众》',
+            '《瓦尔登湖》',
+            '《城南旧事》',
+            '《福尔摩斯探案·全集》',
+            '《东野圭吾·全集》',
+            '《埃隆马斯克传》',
+            '《挪威的森林》',
+            '《撒哈拉的故事》',
+            '《中国通史》',
+            '《中国近代史》',
+            '《置身事内》',
+            '《务虚笔记》',
+            '《病隙碎笔》',
+            '《我与地坛》',
+            '《黄金时代》',
+            '《理想国》',
+            '《沉思录》',
+            '《生死疲劳》',
+            '《人生的枷锁》',
+            '《我们仨》',
+            '《面纱》',
+            '《人生》',
+            '《月亮与六便士》',
+            '《活着》',
+            '《刀锋》',
+            '《百年孤独》',
+            '《直视骄阳 · 征服死亡恐惧》',
+            '《中华人民共和国民法典》',
+            '《人性的弱点》',
+            '《沉默的大多数》'
+          ]}
+          collapse
+        />
+      </div>
+    </TabItem>
+
+    {/* Goods */}
+    <TabItem label='Goods'>
+      <div class='grid gap-4 sm:grid-cols-2'>
+        <List
+          title='已购买'
+          items={[
+            '松下 Lumix S5M2 + 50mm 定焦镜头',
+            '妙控鼠标',
+            'Apple Watch Series 10',
+            'iPhone 13',
+            'AirPods Pro 2',
+            'MacBook Air 13.6英寸 M2',
+            'iPad Air 10.9英寸 64G',
+            'Jay Chou 15 张实体专辑 + CD 机',
+            '狂飙 301_横版 FL（主板） + DHS 39 度 2.15（正） + MOON 月球（反）',
+            'RAIN75 客制化机械键盘 + 碧纹水行键帽',
+            '小米体脂秤',
+            '民谣吉他'
+          ]}
+          collapse
+        />
+        <List
+          title='购物清单'
+          items={[
+            'iPhone 17 Pro',
+            '佳沃 JAVA 公路自行车鱼雷 SILURO6-TOP-7120',
+            'AirPods 4',
+            'DJI Mavic 4 Pro',
+            'DJI RS 4 Mini',
+            'Osmo Action 5 Pro',
+            'DJI Mini 3'
+          ]}
+          collapse
+        />
+      </div>
+    </TabItem>
+
+    {/* Movie */}
+    <TabItem label='Movie'>
+      <div class='grid gap-4 sm:grid-cols-2'>
+        <List
+          title='已阅'
+          items={[
+            '新世界',
+            '釜山行',
+            '坏家伙们',
+            '冠军',
+            '与神同行',
+            '恶人传',
+            '犯罪都市 1~4',
+            '罪恶的编年史',
+            '邻里的人们',
+            '愤怒的黄牛',
+            '邻居',
+            '信条',
+            '大卫·戈尔的一生',
+            '恐怖游轮',
+            '一级恐惧',
+            '玩命记忆',
+            '洛城机密',
+            '控方证人',
+            '人生大事',
+            '触不可及',
+            '绿皮书',
+            '遗愿清单',
+            '楚门的世界',
+            '调音师',
+            '飞驰人生 1~2',
+            '西虹市首富',
+            '抓娃娃',
+            '羞羞的铁拳',
+            '这个杀手不太冷静',
+            '独行月球',
+            '头文字 D',
+            '不能说的秘密',
+            '唐探 1900',
+            '哪吒 1~2',
+            '功夫熊猫 1~3',
+            '名侦探柯南剧场版全系列',
+            '天空之眼',
+            '动物世界',
+            '十二怒汉',
+            '悬崖之上',
+            '惊天魔盗团 1~2',
+            '通勤营救',
+            '秘密访客',
+            '寻梦环游记',
+            '王牌特工',
+            '搏击俱乐部',
+            '爆裂鼓手',
+            '源代码',
+            '无双',
+            '士兵突击',
+            '周处除三害',
+            '阿甘正传',
+            '三傻大闹宝莱坞',
+            '利刃出鞘',
+            '狙击电话亭',
+            '催眠·裁决',
+            '网络谜踪',
+            '嫌疑人 X 的献身',
+            '猫鼠游戏',
+            '泰坦尼克号',
+            '华尔街之狼',
+            '盗梦空间',
+            '禁闭岛',
+            '机械师 1~2',
+            '人之怒',
+            '蜂鸟特工',
+            '养蜂人',
+            '家园防线',
+            '帕克',
+            '无限杀机',
+            '神秘巨星',
+            '摔跤吧爸爸',
+            '未知死亡',
+            '无人生还',
+            '匆匆那年',
+            '十二生肖',
+            '新警察故事',
+            '尼罗河上的惨案',
+            '误杀 1~2',
+            '反贪风暴 1~5',
+            '肖申克的救赎',
+            '唐人街探案 1~3',
+            '扫毒',
+            '魔警',
+            '追龙 1~2',
+            '人潮汹涌',
+            '使徒行者 1~3',
+            '看不见的客人',
+            '七宗罪',
+            '明日边缘',
+            '东方快车谋杀案',
+            '我是谁: 没有绝对安全的系统',
+            '听说',
+            '乘风破浪',
+            '破风',
+            '激战',
+            '翻滚吧阿信',
+            '邪不压正',
+            '热带往事',
+            '湄公河行动',
+            '危城',
+            '中国机长',
+            '你的名字',
+            '天气之子',
+            '你好世界',
+            '大鱼海棠',
+            '铃芽之旅'
+          ]}
+          collapse
+        />
+        <List
+          title='未阅'
+          items={[
+            '让子弹飞',
+            '海边的曼彻斯特',
+            '白日梦想家',
+            '当幸福来敲门',
+            '爱乐之城',
+            '美国往事',
+            '死亡诗社',
+            '我的阿勒泰',
+            '海上钢琴师',
+            '囚徒'
+          ]}
+          collapse
+        />
+      </div>
+    </TabItem>
+
+    {/* Game */}
+    <TabItem label='Game'>
+      <img src='https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202507262238083.jpg' />
+    </TabItem>
+
+    {/* Charity */}
+    <TabItem label='Charity'>
+      <p>
+        人情冷暖，生离死别，固然让人痛苦与无奈，而贫穷则可能让人失去希望。我的理想不伟大，只愿年过半百，归来仍是少年，希望还有机会重新认识这个世界，不辜负这一生吃过的苦。最后如果还能做出点让别人生活更美好的事，那这辈子就赚了。
+      </p>
+      <img src='https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202501100558208.JPG' />
+      <br />
+      <img src='https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202506120633073.jpg' />
+      <br />
+      <img src='https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202501100558383.JPG' />
+      <br />
+      <img src='https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202501100557369.JPG' />
+    </TabItem>
+
+    {/* Sport */}
+    <TabItem label='Sport'>
+      <img src='https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202506281038562.jpg' />
+      <br />
+      <img src='https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202506281038729.jpg' />
+    </TabItem>
+
+    {/* Friend */}
+    <TabItem label='Friend'>
+      <p>
+        我一直是个很悲观的人，也没什么安全感，我走在一直变强的路上，我现在有能力屏蔽掉许多坎坷，但终有一天，我会遇到迈不过去的门槛，压抑不了的负面情绪。我始终会想，这时候，谁还会在我身边，我希望大家都在，但这个显然太过天真了，我现在给不出答案，但其实与人的每一次相遇我都在想，TA
+        会怎么做。
+      </p>
+      <p>
+        我这人从很小的时候就争强好胜，我一直以为是我自己赢了，直到有一天看着镜子，才知道自己输了。在我最美好的时候，我最在意的人都不在我身边。我的很多值得交心的朋友，在我决定敞开心扉的时候，早就不在我身边了。从认识我到对我失望，到底需要多长时间，我每认识一个朋友，就会在心里想一遍这个问题。如果几年前你问我会不会害怕失去而逃避未来的相遇，我会回答是的，但现在不会是。因为我已经失去过很多了，不再差这点了。
+      </p>
+      <p>
+        我很重感情，这是优点也是弱点。 反正这个世界挺没意思的，要是没了我那几个朋友，就更没意思了。
+      </p>
+      <p>我由衷感谢那些还陪在我身边的好朋友们。</p>
+      <img
+        src='https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202501100546655.JPG'
+        title='Friends'
+      />
+      <br />
+      <img src='https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202506180249125.jpg' title='We' />
+    </TabItem>
+  </Tabs>
+
+  {/* Education */}
+  <h2 id='education'>Education</h2>
+  <div class='flex flex-col gap-y-1'>
+    <Card
+      as='a'
+      heading='Xiamen University'
+      subheading='Software Engineering'
+      date='September 2023 - Present'
+      href='https://www.xmu.edu.cn/'
+    >
+      <img
+        class='absolute end-0 z-0 m-0 -my-3 h-full w-1/2 object-cover opacity-40'
+        src='/images/xmu.svg'
+      />
+    </Card>
+    <Card
+      class='mt-2'
+      as='a'
+      heading='Fujian Normal University'
+      subheading='Software Engineering'
+      date='September 2019 - June 2023'
+      href='https://www.fjnu.edu.cn/'
+    >
+      <img
+        class='absolute end-0 z-0 m-0 -my-3 h-full w-1/2 object-cover opacity-40'
+        src='/images/fjnu.svg'
+      />
+    </Card>
+  </div>
+
+  {/* Experience */}
+  <h2 id='experience'>Experience</h2>
+  <div class='flex flex-col gap-y-1'>
+    <Card
+      as='a'
+      heading='Alibaba'
+      subheading='C++ Engineer'
+      date='Nov 2025 - Present'
+      href='https://www.alibaba.com/'
+    >
+      <img
+        class='absolute end-0 z-0 m-0 -my-3 h-auto w-1/2 object-cover opacity-40'
+        src='/images/alibaba.svg'
+      />
+    </Card>
+    <Card
+      as='a'
+      class='mt-2'
+      heading='OPPO'
+      subheading='C++ Engineer'
+      date='Jun 2024 - Aug 2024'
+      href='https://www.oppo.com/'
+    >
+      <img
+        class='absolute end-0 z-0 m-0 -my-3 h-auto w-1/2 object-cover opacity-40'
+        src='/images/oppo.svg'
+      />
+    </Card>
+    <Card
+      as='a'
+      class='mt-2'
+      heading='ISCAS'
+      subheading='C++ Engineer'
+      date='Mar 2024 - May 2024'
+      href='https://www.cas.cn/'
+    >
+      <img
+        class='absolute end-0 z-0 m-0 -my-3 h-auto w-1/2 object-cover opacity-40'
+        src='/images/iscas.svg'
+      />
+    </Card>
+    <Card
+      as='a'
+      class='mt-2'
+      heading='Zhejiang Lab'
+      subheading='Algorithm Engineer'
+      date='Apr 2023 - Jul 2023'
+      href='https://www.zhejianglab.org/'
+    >
+      <img
+        class='absolute end-0 z-0 m-0 -my-3 h-full w-1/2 object-cover opacity-40'
+        src='/images/zhejianglab.svg'
+      />
+    </Card>
+  </div>
+
+  {/* Tools */}
   <h2 id='tools'>Tools</h2>
-  <p>Current support tools as follow:</p>
+  <p>The tools currently in use are as follows:</p>
   <ToolSection
     class='mb-5'
     title='Design'
     tools={[
       {
-        name: 'Photoshop',
-        description: 'Picture Editing',
-        href: 'https://www.adobe.com/products/photoshop',
-        icon: import('@/assets/tools/photoshop.svg?raw')
-      },
-      {
-        name: 'Illustrator',
-        description: 'Vector Drawing',
-        href: 'https://www.adobe.com/products/illustrator',
-        icon: import('@/assets/tools/illustrator.svg?raw')
-      },
-      {
-        name: 'After Effects',
-        description: 'Motion Graphics',
-        href: 'https://www.adobe.com/products/aftereffects',
-        icon: import('@/assets/tools/aftereffects.svg?raw')
-      },
-      {
         name: 'Premiere Pro',
         description: 'Video Editing',
         href: 'https://www.adobe.com/products/premiere',
         icon: import('@/assets/tools/premiere.svg?raw')
+      },
+      {
+        name: 'Photoshop',
+        description: 'Photo Editing',
+        href: 'https://www.adobe.com/products/photoshop',
+        icon: import('@/assets/tools/photoshop.svg?raw')
+      },
+      {
+        name: 'Lightroom',
+        description: 'Photo Editing',
+        href: 'https://www.adobe.com/products/photoshop-lightroom-classic',
+        icon: import('@/assets/tools/lightroom-classic.svg?raw')
+      },
+      {
+        name: 'Final Cut Pro',
+        description: 'Video Editing',
+        href: 'https://www.apple.com/final-cut-pro/',
+        icon: import('@/assets/tools/final-cut-pro.svg?raw')
+      },
+      {
+        name: 'DaVinci Resolve',
+        description: 'Video Editing',
+        href: 'https://www.blackmagicdesign.com/products/davinciresolve/',
+        icon: import('@/assets/tools/davinci-resolve.svg?raw')
       }
     ]}
   />
@@ -75,16 +558,16 @@ const headings = [
     title='Productivity'
     tools={[
       {
-        name: 'Chrome',
-        description: 'Browser',
-        href: 'https://www.google.com/chrome/',
-        icon: import('@/assets/tools/chrome.svg?raw')
+        name: 'ChatGPT',
+        description: 'AI Assistant',
+        href: 'https://chat.openai.com/',
+        icon: import('@/assets/tools/chatgpt.svg?raw')
       },
       {
-        name: 'Firefox',
-        description: 'Browser',
-        href: 'https://www.mozilla.org/en-US/firefox',
-        icon: import('@/assets/tools/firefox.svg?raw')
+        name: 'Cursor',
+        description: 'AI Code Assistant',
+        href: 'https://cursor.com/',
+        icon: import('@/assets/tools/cursor.svg?raw')
       },
       {
         name: 'Notion',
@@ -97,6 +580,18 @@ const headings = [
         description: 'Markdown Editor',
         href: 'https://typora.io/',
         icon: import('@/assets/tools/typora.svg?raw')
+      },
+      {
+        name: 'Chrome',
+        description: 'Browser',
+        href: 'https://www.google.com/chrome/',
+        icon: import('@/assets/tools/chrome.svg?raw')
+      },
+      {
+        name: 'Safari',
+        description: 'Browser',
+        href: 'https://www.apple.com/safari/',
+        icon: import('@/assets/tools/safari.svg?raw')
       }
     ]}
   />
@@ -111,16 +606,28 @@ const headings = [
         icon: import('@/assets/tools/vscode.svg?raw')
       },
       {
-        name: 'Neovim',
-        description: 'IDE',
-        href: 'https://neovim.io/',
-        icon: import('@/assets/tools/neovim.svg?raw')
+        name: 'Vim',
+        description: 'Text Editor',
+        href: 'https://www.vim.org/',
+        icon: import('@/assets/tools/vim.svg?raw')
       },
       {
-        name: 'Sublime Text',
+        name: 'CLion',
         description: 'IDE',
-        href: 'https://www.sublimetext.com/',
-        icon: import('@/assets/tools/sublime.svg?raw')
+        href: 'https://www.jetbrains.com/clion/',
+        icon: import('@/assets/tools/clion.svg?raw')
+      },
+      {
+        name: 'PyCharm',
+        description: 'IDE',
+        href: 'https://www.jetbrains.com/pycharm/',
+        icon: import('@/assets/tools/pycharm.svg?raw')
+      },
+      {
+        name: 'GoLand',
+        description: 'IDE',
+        href: 'https://www.jetbrains.com/go/',
+        icon: import('@/assets/tools/goland.svg?raw')
       }
     ]}
   />
@@ -129,131 +636,86 @@ const headings = [
     title='Environment'
     tools={[
       {
-        name: 'Arch Linux',
-        description: 'Linux Distribution',
-        href: 'https://archlinux.org/',
-        icon: import('@/assets/tools/archlinux.svg?raw')
-      },
-      {
-        name: 'Ubuntu 24.04 LTS',
+        name: 'Ubuntu 22.04 LTS',
         description: 'Linux Distribution',
         href: 'https://ubuntu.com/',
         icon: import('@/assets/tools/ubuntu.svg?raw')
       },
       {
-        name: 'MacOS Tahoe',
+        name: 'MacOS Sequoia',
         description: 'MacBook Air',
         href: 'https://www.apple.com/macos/',
         icon: import('@/assets/tools/apple.svg?raw')
       },
       {
         name: 'Windows 11',
-        description: 'Framework Laptop 16',
+        description: 'Lenovo Xiaoxin',
         href: 'https://news.microsoft.com/windows11-general-availability/',
         icon: import('@/assets/tools/windows11.svg?raw')
       }
     ]}
   />
 
-  {/* social-networks */}
+  {/* Social Networks */}
   <h2 id='social-networks'>Social Networks</h2>
-  <p>
-    Lorem ipsum dolor sit amet, vidit suscipit at mei. Quem denique mea id. Usu ei regione indoctum
-    dissentiunt, cu meliore fuisset mei, vel quod voluptua ne.
-  </p>
+  <p>You can find me here:</p>
   <Substats
     stats={[
       {
         platform: 'GitHub',
         icon: 'github',
-        link: 'https://github.com/cworld1',
+        link: 'https://github.com/Wu-yikun',
         text: 'followers',
-        api: 'github/cworld1'
+        api: 'github/Wu-yikun'
       },
       {
-        platform: 'Telegram',
-        icon: 'telegram',
-        color: '#2ca5e0',
-        link: 'https://t.me/cworld0_cn',
-        text: 'subscribers',
-        api: 'telegram/cworld0_cn'
+        platform: 'Juejin',
+        icon: 'juejin',
+        color: '#0084ff',
+        link: 'https://juejin.cn/user/1654082381026734',
+        text: 'followers',
+        api: 'juejin/1654082381026734'
       },
       {
-        platform: 'Weibo',
-        icon: 'weibo',
-        color: '#e71f19',
-        link: 'https://weibo.com/cworld0',
+        platform: 'Zhihu',
+        icon: 'zhihu',
+        color: '#0084ff',
+        link: 'https://www.zhihu.com/people/JayChou',
         text: 'followers',
-        api: 'weibo/5501674056'
+        count: 2
+      },
+      {
+        platform: 'NetEase Music',
+        icon: 'netease',
+        color: '#E72E2C',
+        link: 'https://music.163.com/#/user/home?id=1479129382',
+        text: 'followers',
+        api: 'neteasemusic/1479129382'
+      },
+      {
+        platform: 'Bilibili',
+        icon: 'bilibili',
+        color: '#FE7399',
+        link: 'https://space.bilibili.com/441384986',
+        text: 'followers',
+        api: 'bilibili/441384986'
       },
       {
         platform: 'Steam',
         icon: 'steam',
         color: '#50769d',
-        link: 'https://steamcommunity.com/id/cworld',
+        link: 'https://steamcommunity.com/profiles/76561199574408629/',
         text: 'games',
-        api: 'steamgames/76561199021278120'
+        api: 'steamgames/76561199574408629'
       }
+      // {
+      //   platform: 'Weibo',
+      //   icon: 'weibo',
+      //   color: '#e71f19',
+      //   link: 'https://weibo.com/u/7320866025',
+      //   text: 'followers',
+      //   api: 'weibo/6602671707'
+      // }
     ]}
   />
-
-  {/* gossips */}
-  <h2 id='gossips'>Gossips</h2>
-  <Collapse title='Lorem ipsum'>
-    Lorem ipsum dolor sit amet, vidit suscipit at mei. Quem denique mea id. Usu ei regione indoctum
-    dissentiunt, cu meliore fuisset mei, vel quod voluptua ne. Ex dicat impedit mel, at eum oratio
-    possit voluptatum.
-  </Collapse>
-
-  {/* about-blog */}
-  <h2 id='about-blog'>About Blog</h2>
-  <p>Website history:</p>
-  <Timeline
-    events={[
-      {
-        date: '2024-04-29',
-        content:
-          'Website refactored using <a href="https://astro.build/" target="_blank">Astro</a> and <a href="https://github.com/srleom/astro-theme-resume" target="_blank">Astro Theme Resume</a>'
-      },
-      {
-        date: '2024-07-26',
-        content:
-          'Website abstracted as a theme and published on <a href="https://github.com/cworld1/astro-theme-pure"target="_blank">Github</a>'
-      },
-      {
-        date: '2024-07-27',
-        content: 'Began writing website docs'
-      }
-    ]}
-  />
-  <p>
-    The smooth operation and personalized customization of website also rely on the resources and
-    technical support provided by the following excellent projects/service providers:
-  </p>
-  <ul>
-    <li>Domain: <a href='#' target='_blank'>Vercel</a></li>
-    <li>
-      Framework & Theme: <a href='https://astro.build/' target='_blank'>Astro</a> + <a
-        href='https://github.com/cworld1/astro-theme-pure'
-        target='_blank'>Astro Theme Pure</a
-      >
-    </li>
-    <li>
-      Site hosting: <a href='https://vercel.com/' target='_blank'>Vercel</a>
-    </li>
-    <li>
-      CI/CD: <a href='https://vercel.com/workflow' target='_blank'>Vercel Workflow</a>
-    </li>
-    <!-- <li>Resources speedup: <a href='https://cdn.cbd.int/' target='_blank'>CBD CDN</a></li> -->
-    <li>Comment system: <a href='https://waline.js.org' target='_blank'>Waline</a></li>
-    <li>
-      Visits: <a href='https://supabase.com/' target='_blank'>Supabase</a> +
-      <a href='https://waline.js.org/' target='_blank'>Waline</a>
-    </li>
-    <li>
-      Other statistics: <a href='https://github.com/spencerwooo/substats' target='_blank'
-        >Substats</a
-      >
-    </li>
-  </ul>
 </PageLayout>

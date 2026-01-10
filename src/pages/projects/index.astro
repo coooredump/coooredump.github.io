@@ -1,25 +1,22 @@
 ---
 import { Image } from 'astro:assets'
 
-import { Button, Collapse, Icon } from 'astro-pure/user'
+import { Button, Icon } from 'astro-pure/user'
 import PageLayout from '@/layouts/CommonPage.astro'
 import ProjectSection from '@/components/projects/ProjectSection.astro'
-import Sponsors from '@/components/projects/Sponsors.astro'
 import Sponsorship from '@/components/projects/Sponsorship.astro'
-// import alipay from '@/assets/alipay-qrcode.jpg'
-import KeyIcon from '@/assets/icons/key.svg'
-import wechat from '@/assets/wechat-qrcode.jpg'
+import alipay from '@/assets/alipay-qrcode.png'
+import wechat from '@/assets/wechat-qrcode.png'
 
 const headings = [
   { depth: 2, slug: 'program', text: 'Program' },
   { depth: 2, slug: 'roadmap', text: 'Roadmap' },
-  // { depth: 2, slug: 'theme', text: 'Theme' },
   { depth: 2, slug: 'sponsorship', text: 'Sponsorship' }
 ]
 ---
 
 <PageLayout title='Projects' {headings} view>
-  <p>Github Activities:</p>
+  <p>GitHub Activities:</p>
   <p>
     <Image
       src='https://ghchart.rshah.org/659eb9/Wu-yikun'
@@ -32,7 +29,7 @@ const headings = [
     If you think it would be useful or interesting to collaborate on a project, you can donate to
     support my work or contact me to discuss a project.
   </p>
-  <Button title='Checkout sponsorship' class='w-fit' href='#sponsorship'>
+  <Button title='Checkout Sponsorship' class='w-fit' href='#sponsorship'>
     <Icon class='size-5' name='receive-money' slot='before' />
   </Button>
 
@@ -94,27 +91,13 @@ const headings = [
     ]}
   />
 
-  <!-- <h2 id='theme'>Theme</h2>
-  <ProjectSection
-    projects={[
-      {
-        name: '🍭 Astro-theme-pure',
-        description: 'A simple, clean but powerful blog theme build by astro.',
-        links: [
-          { type: 'github', href: 'https://github.com/cworld1/astro-theme-pure' },
-          { type: 'site', href: 'https://astro-pure.js.org/docs' }
-        ]
-      }
-    ]}
-  /> -->
-
   <!-- sponsorship -->
   <h2 id='sponsorship'>Sponsorship</h2>
   <p>Please leave a message or contact me proactively after sponsorship.</p>
   <Sponsorship
     methods={[
       { name: 'WeChat', icon: 'wechat-pay', image: wechat },
-      // { name: 'Alipay', icon: 'alipay', image: alipay }
+      { name: 'Alipay', icon: 'alipay', image: alipay }
     ]}
   />
   <!-- <p>Thanks to the following sponsors:</p>

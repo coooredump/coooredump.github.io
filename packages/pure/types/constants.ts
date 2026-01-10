@@ -15,6 +15,8 @@ export const socialLinks = [
   'steam',
   'bilibili',
   'zhihu',
+  'juejin',
   'coolapk',
-  'netease'
+  'netease',
+  'leetcode'
 ] as const

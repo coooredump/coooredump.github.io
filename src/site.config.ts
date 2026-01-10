@@ -48,10 +48,11 @@ export const theme: ThemeUserConfig = {
   header: {
     menu: [
       { title: 'Blog', link: '/blog' },
-      { title: 'Docs', link: '/docs' },
-      { title: 'Projects', link: '/projects' },
       { title: 'Archives', link: '/archives' },
+      { title: 'Projects', link: '/projects' },
+      { title: 'Love', link: '/love' },
       // { title: 'Links', link: '/links' },
+      { title: 'Docs', link: '/docs' },
       { title: 'About', link: '/about' }
     ]
   },
@@ -63,36 +64,20 @@ export const theme: ThemeUserConfig = {
     // year: `© 2019 - ${new Date().getFullYear()}`,
     links: [
       // Registration link
-      // {
-      //   title: 'Moe ICP 114514',
-      //   link: 'https://icp.gov.moe/?keyword=114514',
-      //   style: 'text-sm' // Uno/TW CSS class
-      // },
-      // {
-      //   title: 'Travelling',
-      //   link: 'https://www.travellings.cn/go.html',
-      //   style: 'text-sm'
-      // },
-      // // Privacy Policy link
-      // {
-      //   title: 'Site Policy',
-      //   link: '/terms/list',
-      //   pos: 2 // position set to 2 will be appended to copyright line
-      // }
     ],
     /** Enable displaying a “Astro & Pure theme powered” link in your site’s footer. */
     credits: false,
     /** Optional details about the social media accounts for this site. */
     social: {
       github: 'https://github.com/Wu-yikun',
-      zhihu: "https://www.zhihu.com/people/JayChou",
       email: "mailto:wuyikun@stu.xmu.edu.cn",
-      netease: "https://music.163.com/#/user/home?id=1479129382",
-      tiktok: 'https://www.douyin.com/user/MS4wLjABAAAAzWc63J3lkEwARMZWBU39myy7MtgZj81ZkrI06Bt3TWKsM2SikoTWYRH12iCYJxJ6',
-      weibo: 'https://weibo.com/u/7320866025',
-      steam: 'https://steamcommunity.com/id/wu-yikun/',
-      bilibili: "https://space.bilibili.com/441384986",
-      // tiktok: "https://www.douyin.com/user/MS4wLjABAAAAzWc63J3lkEwARMZWBU39myy7MtgZj81ZkrI06Bt3TWKsM2SikoTWYRH12iCYJxJ6",
+      // zhihu: "https://www.zhihu.com/people/JayChou",
+      // netease: "https://music.163.com/#/user/home?id=1479129382",
+      // tiktok: 'https://www.douyin.com/user/MS4wLjABAAAAzWc63J3lkEwARMZWBU39myy7MtgZj81ZkrI06Bt3TWKsM2SikoTWYRH12iCYJxJ6',
+      // weibo: 'https://weibo.com/u/7320866025',
+      // steam: 'https://steamcommunity.com/id/wu-yikun/',
+      // bilibili: "https://space.bilibili.com/441384986",
+      // leetcode: 'https://leetcode.cn/u/wu-yikun/',
     }
   },
 
@@ -163,10 +148,11 @@ export const integ: IntegrationUserConfig = {
     }
   },
   // Comment system
+  // https://waline.js.org/guide/get-started/#vercel-%E9%83%A8%E7%BD%B2-%E6%9C%8D%E5%8A%A1%E7%AB%AF
   waline: {
     enable: true,
     // Server service link
-    server: 'https://astro-theme-pure-waline.arthals.ink/',
+    server: 'https://waline-silk-phi.vercel.app/',
     // Refer https://waline.js.org/en/guide/features/emoji.html
     emoji: ['bmoji', 'weibo'],
     // Refer https://waline.js.org/en/reference/client/props.html

@@ -48,7 +48,9 @@ const toc = generateToc(headings)
 
       // Initialize the headings and tocLinks
       this.headings = Array.from(
-        document.querySelectorAll('article h2, article h3, article h4, article h5, article h6')
+        document.querySelectorAll(
+          'article h2[id], article h3[id], article h4[id], article h5[id], article h6[id]'
+        )
       )
       this.tocLinks = Array.from(this.querySelectorAll('a[href^="#"]')).map((link) => ({
         element: link as HTMLAnchorElement,
