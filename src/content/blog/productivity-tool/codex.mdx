@@ -1,0 +1,135 @@
+---
+title: 远程服务器启用 Codex 插件
+description: 把本地的 Codex 登录信息复制到服务器，并让服务器的 Codex 流量通过 SSH 转发到本地代理，从而实现服务器远程环境下的 Codex 正常可用。
+publishDate: 2026-02-26
+tags: [生产力工具]
+heroImage: { src: '../_img/20260226-hX9ebM.jpg' }
+language: Chinese
+comment: true
+draft: false
+---
+
+> ⚠️ 提示：请严格遵守公司或组织的数据安全红线
+>
+> 在进行下述操作前，请务必确认您的单位 允许 使用 SSH 隧道、端口转发以及代理转发等技术。 某些公司/机构明确禁止以下行为：
+>
+> - SSH 端口转发（LocalForward / RemoteForward）
+> - 利用远程服务器通过本地代理访问互联网
+> - 传输敏感代码、令牌的重要数据
+>
+> 如违反安全规范，后果自负，请谨慎操作。
+
+**TL;DR**：把本地的 Codex 登录信息复制到服务器，并让服务器的 Codex 流量通过 SSH 转发到本地代理，从而实现服务器远程环境下的 Codex 正常可用。
+
+---
+
+为了在远程服务器（如 GPU 服务器）中正常使用 IDE（VSCode / Cursor）中的 **Codex 插件**，需要将本机的 Codex 登录信息同步到服务器，并配置代理转发，使远程服务器能够通过本地代理访问 Codex 服务。以下是完整的配置步骤：
+
+## 1. 上传本地 Codex 授权信息到服务器
+
+当你在本地 IDE 成功登录 Codex 插件后，插件会在你的用户目录下生成目录：
+
+```bash
+~/.codex
+
+$ ls -alh ~/.codex/
+total 392
+drwxr-xr-x  16 coooredump  staff   512B  2 26 01:42 .
+drwxr-x---+ 87 coooredump  staff   2.7K  2 26 02:36 ..
+-rw-r--r--@  1 coooredump  staff   2.7K  2 26 01:39 .codex-global-state.json
+-rw-r--r--   1 coooredump  staff     3B  2  4 03:01 .personality_migration
+-rw-------@  1 coooredump  staff   4.3K  2 26 01:37 auth.json
+-rw-------   1 coooredump  staff   135B  2 26 01:42 config.toml
+-rw-------@  1 coooredump  staff    85B  9 14 09:52 history.jsonl
+drwxr-xr-x@  3 coooredump  staff    96B  9 14 09:52 log
+-rw-r--r--@  1 coooredump  staff   165K  2 26 02:11 models_cache.json
+drwxr-xr-x   4 coooredump  staff   128B  1  2 17:28 sessions
+drwxr-xr-x   4 coooredump  staff   128B  2 26 01:42 shell_snapshots
+drwxr-xr-x   3 coooredump  staff    96B  2 26 01:41 skills
+drwxr-xr-x@  3 coooredump  staff    96B  2  6 22:54 sqlite
+drwxr-xr-x   4 coooredump  staff   128B  2  6 22:54 tmp
+drwxr-xr-x@  2 coooredump  staff    64B  2 26 01:37 vendor_imports
+-rw-r--r--@  1 coooredump  staff    76B  9 14 09:52 version.json
+```
+
+为了在远程服务器启用 Codex，需要将这个目录复制到服务器上。
+
+1️⃣ 在本地打包 `~/.codex`：
+
+```bash
+tar -cf codex.tar ~/.codex
+```
+
+2️⃣ 上传到你服务器的用户目录（`~/`），然后在服务器上解压：
+
+```bash
+tar -xf codex.tar -C ~/
+```
+
+最后确认目录 `~/.codex` 是否存在即可。
+
+## 2. 配置 IDE 桥接本地代理（SSH 端口转发）
+
+由于远程服务器通常不能直接访问 Codex 服务，所以需要通过 **本地代理（🪜）** 转发请求，让服务器通过 SSH 隧道访问本地代理。
+
+### 2.1 在 IDE SSH 中配置端口转发
+
+先确认本地🪜的端口（此处以 7890 为例）：
+
+![image-20260226024009236](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS@master/uPic/20260226-olDLnC.png)
+
+然后在 SSH 配置（VSCode / Cursor 的 SSH Host）中，加入端口转发：
+
+![image](https://linux.do/uploads/default/optimized/4X/c/8/3/c83f8ada1e8f87f57bfae33c68218a5f7ccc7f8c_2_254x250.png)
+
+即修改 `/Users/xxx/.ssh/config`：
+
+```
+Host 8001
+    HostName xxx
+    Port xxx
+    User xxx
+    # codex 端口转发
+    RemoteForward 7890 localhost:7890
+```
+
+### 2.2 确保本地代理允许局域网访问
+
+打开🪜设置，勾选：「允许来自局域网的连接」
+
+![image-20260226024359338](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS@master/uPic/20260226-qTE32W.png)
+
+修改完成后，再通过 IDE 远程登录服务器。
+
+## 3. 服务器代理配置
+
+在远程服务器上，让所有 HTTP/HTTPS 请求都走刚才通过 SSH 映射的代理。
+
+### 3.1 服务器代理设置
+
+在服务器的 `~/.bashrc` 添加以下内容
+
+```bash
+export http_proxy=http://127.0.0.1:7890
+export https_proxy=http://127.0.0.1:7890
+```
+
+然后执行：
+
+```bash
+source ~/.bashrc
+```
+
+### 3.2 在 IDE 中设置远程工作空间的代理
+
+**注意，此处设置需要在远程服务器的工作空间设置，而非本地工作空间设置。**
+
+IDE 中按下`Cmd/Ctrl + Shift + P`，输入`Open Remote Settings`，进入远程服务器的设置面板，搜索 "proxy"，将： `http-proxy` 设置为 `http://127.0.0.1:7890`，如下图
+
+![image-20260226024539862](https://cdn.jsdelivr.net/gh/Wu-yikun/OSS@master/uPic/20260226-oqzynq.png)
+
+然后关闭并重新连接 Remote：`Cmd/Ctrl + Shift + P → Close Remote Connection`
+
+## 4. 安装并启动 Codex 插件
+
+重新连接服务器后，在插件市场安装 Codex（如果未安装），打开 Codex 插件，此时应该能显示正常的登录界面，并且运行命令不会出现反复 `Reconnect` 的错误。
