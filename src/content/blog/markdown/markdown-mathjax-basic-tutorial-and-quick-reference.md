@@ -2,7 +2,7 @@
 title: Markdown 数学公式指导手册
 publishDate: 2025-04-12
 description: MathJax 速查手册
-tags: [markdown]
+tags: [Markdown]
 heroImage: { src: '../_img/202504140008452.png', color: '#B4C6DA' }
 language: Chinese
 ---
