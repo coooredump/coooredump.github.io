@@ -15,9 +15,9 @@ const programming = ['C++', 'C', 'Python', 'PyTorch', 'Java', 'Golang', 'MySQL']
 const web = ['Vue.js', 'TypeScript', 'JavaScript', 'CSS', 'HTML']
 const tools = ['VSCode', 'Vim', 'Linux', 'Shell', 'Git', 'Docker']
 const design = ['Photoshop', 'Premiere Pro', 'Final Cut Pro', 'Lightroom', 'Davinci Resolve']
-const other = ['Markdown', 'Notion', 'LaTeX', 'ChatGPT']
+const other = ['Markdown', 'Notion', 'LaTeX', 'ChatGPT', 'Cursor']
 
-const MAX_POSTS = 6
+const MAX_POSTS = 5
 const allPosts = await getBlogCollection()
 const allPostsByDate = sortMDByDate(allPosts).slice(0, MAX_POSTS)
 ---
@@ -48,12 +48,12 @@ const allPostsByDate = sortMDByDate(allPosts).slice(0, MAX_POSTS)
     <div id='content' class='animate flex flex-col gap-y-10 md:w-4/5 lg:w-5/6'>
       <Section title='About'>
         <p class='text-muted-foreground'>Developer / Photographer</p>
-        <p class='text-muted-foreground'>好多事情想不明白，只能先活着，看以后能不能想明白了。</p>
+        <!-- <p class='text-muted-foreground'>好多事情想不明白，只能先活着，看以后能不能想明白了。</p>
         <p class='text-muted-foreground'>人人都得活着，所以人人都得藏着。</p>
-        <p class='text-muted-foreground'>
-          我偶尔就在这样沉默的冰河之下，悄悄探出头来，感受下有温度的太阳。
-        </p>
-        <p class='text-muted-foreground'>然后再沉下去，告诉别人海面之上的故事。</p>
+        <p class='text-muted-foreground'>我偶尔就在这样沉默的冰河之下，悄悄探出头来，感受下有温度的太阳。</p>
+        <p class='text-muted-foreground'>然后再沉下去，告诉别人海面之上的故事。</p> -->
+        <p class='text-muted-foreground'>有些缘分就像北平的秋雨，不贪心便是落叶轻覆的思念，过分执着就成了望不穿的绵绵水帘</p>
+        <p class='text-muted-foreground'>一生很长，很多人不会永远在我的生活里，但会永远在我的故事里</p>
         <Button title='More about me' class='w-fit self-end' href='/about' variant='ahead' />
       </Section>
       {
