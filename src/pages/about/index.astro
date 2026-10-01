@@ -16,10 +16,16 @@ const headings = [
 
 {/* About me */}
 <PageLayout title='About' {headings} comment>
-  <p>Developer / Photographer</p>
+  <span>Developer / Photographer</span>
   <p>
-    I am an M.S. student in the Department of Software Engineering at the School of Informatics,
-    Xiamen University. My research interests include data deduplication and storage system.
+    I’m a C++ engineer with AMap’s International Ecosystem Team, focused on building reliable
+    systems for products that operate at scale. I received my M.S. in Software Engineering from
+    Xiamen University, where my interests centered on storage systems.
+  </p>
+  <p>
+    Beyond engineering, I’m a photographer and an attentive collector of daily moments. Through
+    code, writing, and photography, I explore the systems that support how people move through the
+    world and the small, human stories that make those journeys worth remembering.
   </p>
 
   {/* Coredump */}
@@ -35,79 +41,93 @@ const headings = [
       <Timeline
         events={[
           {
-            date: '2025.06.14',
+            date: '2025.09.14',
             content:
-              '<a href="http://coooredump.github.io/blog/photography/fuzhou_2025-06-14">福建 · 福州</a>'
+              '<a href="../blog/tourism/beijing_2026-09-14">北京</a>'
+          },
+          {
+            date: '2025.06.19',
+            content:
+              '<a href="../blog/tourism/beijing_2026-06-19">北京</a>'
+          },
+          {
+            date: '2026.05.01',
+            content:
+              '<a href="../blog/tourism/ganzhou_2026-05-01">赣州</a>'
+          },
+          {
+            date: '2026.04.03',
+            content:
+              '<a href="../blog/tourism/chaozhou_2026-04-03">潮州</a>'
+          },
+          {
+            date: '2025.06.14',
+            content: '<a href="../blog/tourism/fuzhou_2025-06-14">福州</a>'
           },
           {
             date: '2024.11.29',
             content:
-              '<a href="http://coooredump.github.io/blog/photography/guangzhou_2024-11-29">广东 · 广州</a>'
+              '<a href="../blog/tourism/guangzhou_2024-11-29">广州</a>'
           },
           {
             date: '2024.10.30',
             content:
-              '<a href="http://coooredump.github.io/blog/photography/dongshandao_2024-10-30">福建 · 漳州 · 东山岛</a>'
+              '<a href="../blog/tourism/dongshandao_2024-10-30">东山岛</a>'
           },
           {
             date: '2024.10.01',
-            content:
-              '<a href="http://coooredump.github.io/blog/photography/fuzhou_2024-10-01">福建 · 福州</a>'
+            content: '<a href="../blog/tourism/fuzhou_2024-10-01">福州</a>'
           },
           {
             date: '2024.07.27',
             content:
-              '<a href="http://coooredump.github.io/blog/photography/yinchuan_2024-07-27">宁夏 · 银川</a>'
+              '<a href="../blog/tourism/yinchuan_2024-07-27">银川</a>'
           },
           {
             date: '2024.07.14',
             content:
-              '<a href="http://coooredump.github.io/blog/photography/chengdu_2024-07-14">四川 · 成都</a>'
+              '<a href="../blog/tourism/chengdu_2024-07-14">成都</a>'
           },
           {
             date: '2024.06.24',
-            content:
-              '<a href="https://coooredump.github.io/blog/photography/xian_2024-06-24/">陕西 · 西安</a>'
+            content: '<a href="../blog/tourism/xian_2024-06-24/">西安</a>'
           },
           {
             date: '2024.06.15',
             content:
-              '<a href="http://coooredump.github.io/blog/photography/hangzhou_2024-06-15">浙江 · 杭州</a>'
+              '<a href="../blog/tourism/hangzhou_2024-06-15">杭州</a>'
           },
           {
             date: '2024.05.01',
             content:
-              '<a href="http://coooredump.github.io/blog/photography/zhangzhou_2024-05-01">福建 · 漳州 · 南靖土楼</a>'
+              '<a href="../blog/tourism/zhangzhou_2024-05-01">南靖土楼</a>'
           },
           {
             date: '2024.01.28',
             content:
-              '<a href="http://coooredump.github.io/blog/photography/quanzhou_2024-01-28">福建 · 泉州</a>'
+              '<a href="../blog/tourism/quanzhou_2024-01-28">泉州</a>'
           },
           {
             date: '2023.12.24',
-            content:
-              '<a href="http://coooredump.github.io/blog/photography/xiamen_2023-12-24">福建 · 厦门</a>'
+            content: '<a href="../blog/tourism/xiamen_2023-12-24">厦门</a>'
           },
           {
             date: '2023.10.27',
             content:
-              '<a href="http://coooredump.github.io/blog/photography/shenzhen_2023-10-27">广东 · 深圳</a>'
+              '<a href="../blog/tourism/shenzhen_2023-10-27">深圳</a>'
           },
           {
             date: '2023.06.14',
-            content:
-              '<a href="http://coooredump.github.io/blog/photography/fjnu_2023-06-14">福建 · 福州 · 毕业季</a>'
+            content: '<a href="../blog/tourism/fjnu_2023-06-14">福州</a>'
           },
           {
             date: '2023.04.28',
             content:
-              '<a href="http://coooredump.github.io/blog/photography/hangzhou_2023-04-28">浙江 · 杭州</a>'
+              '<a href="../blog/tourism/hangzhou_2023-04-28">杭州</a>'
           },
           {
             date: '2023.04.04',
-            content:
-              '<a href="http://coooredump.github.io/blog/photography/wuhan_2023-04-04">湖北 · 武汉</a>'
+            content: '<a href="../blog/tourism/wuhan_2023-04-04">武汉</a>'
           }
         ]}
       />
@@ -218,7 +238,9 @@ const headings = [
             '妙控鼠标',
             'Apple Watch Series 10',
             'iPhone 13',
+            'iPhone 17',
             'AirPods Pro 2',
+            'AirPods 4 (ANC)',
             'MacBook Air 13.6英寸 M2',
             'iPad Air 10.9英寸 64G',
             'Jay Chou 15 张实体专辑 + CD 机',
@@ -232,9 +254,7 @@ const headings = [
         <List
           title='购物清单'
           items={[
-            'iPhone 17 Pro',
             '佳沃 JAVA 公路自行车鱼雷 SILURO6-TOP-7120',
-            'AirPods 4',
             'DJI Mavic 4 Pro',
             'DJI RS 4 Mini',
             'Osmo Action 5 Pro',
@@ -390,6 +410,8 @@ const headings = [
       <p>
         人情冷暖，生离死别，固然让人痛苦与无奈，而贫穷则可能让人失去希望。我的理想不伟大，只愿年过半百，归来仍是少年，希望还有机会重新认识这个世界，不辜负这一生吃过的苦。最后如果还能做出点让别人生活更美好的事，那这辈子就赚了。
       </p>
+      <img src='https://cdn.jsdelivr.net/gh/Wu-yikun/OSS@master/uPic/20261001-8TWml8.JPG' />
+      <br />
       <img src='https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202501100558208.JPG' />
       <br />
       <img src='https://cdn.jsdelivr.net/gh/Wu-yikun/OSS/PicGo/202506120633073.jpg' />
@@ -440,7 +462,7 @@ const headings = [
     >
       <img
         class='absolute end-0 z-0 m-0 -my-3 h-full w-1/2 object-cover opacity-40'
-        src='/images/xmu.svg'
+        src='/svg/xmu.svg'
       />
     </Card>
     <Card
@@ -453,7 +475,7 @@ const headings = [
     >
       <img
         class='absolute end-0 z-0 m-0 -my-3 h-full w-1/2 object-cover opacity-40'
-        src='/images/fjnu.svg'
+        src='/svg/fjnu.svg'
       />
     </Card>
   </div>
@@ -465,12 +487,12 @@ const headings = [
       as='a'
       heading='Alibaba'
       subheading='C++ Engineer'
-      date='Nov 2025 - Present'
+      date='Jun 2026 - Now'
       href='https://www.alibaba.com/'
     >
       <img
         class='absolute end-0 z-0 m-0 -my-3 h-auto w-1/2 object-cover opacity-40'
-        src='/images/alibaba.svg'
+        src='/svg/alibaba.svg'
       />
     </Card>
     <Card
@@ -483,7 +505,7 @@ const headings = [
     >
       <img
         class='absolute end-0 z-0 m-0 -my-3 h-auto w-1/2 object-cover opacity-40'
-        src='/images/oppo.svg'
+        src='/svg/oppo.svg'
       />
     </Card>
     <Card
@@ -496,7 +518,7 @@ const headings = [
     >
       <img
         class='absolute end-0 z-0 m-0 -my-3 h-auto w-1/2 object-cover opacity-40'
-        src='/images/iscas.svg'
+        src='/svg/iscas.svg'
       />
     </Card>
     <Card
@@ -509,7 +531,7 @@ const headings = [
     >
       <img
         class='absolute end-0 z-0 m-0 -my-3 h-full w-1/2 object-cover opacity-40'
-        src='/images/zhejianglab.svg'
+        src='/svg/zhejianglab.svg'
       />
     </Card>
   </div>
@@ -558,18 +580,6 @@ const headings = [
     title='Productivity'
     tools={[
       {
-        name: 'ChatGPT',
-        description: 'AI Assistant',
-        href: 'https://chat.openai.com/',
-        icon: import('@/assets/tools/chatgpt.svg?raw')
-      },
-      {
-        name: 'Cursor',
-        description: 'AI Code Assistant',
-        href: 'https://cursor.com/',
-        icon: import('@/assets/tools/cursor.svg?raw')
-      },
-      {
         name: 'Notion',
         description: 'Note Taking',
         href: 'https://www.notion.so/',
@@ -592,6 +602,36 @@ const headings = [
         description: 'Browser',
         href: 'https://www.apple.com/safari/',
         icon: import('@/assets/tools/safari.svg?raw')
+      },
+      {
+        name: 'ChatGPT',
+        description: 'AI Assistant',
+        href: 'https://chat.openai.com/',
+        icon: import('@/assets/tools/chatgpt.svg?raw')
+      },
+      {
+        name: 'Cursor',
+        description: 'AI Assistant',
+        href: 'https://cursor.com/',
+        icon: import('@/assets/tools/cursor.svg?raw')
+      },
+      {
+        name: 'Claude Code',
+        description: 'AI Assistant',
+        href: 'https://www.anthropic.com/product/claude-code',
+        icon: import('@/assets/tools/claude-code.svg?raw')
+      },
+      {
+        name: 'DeepSeek',
+        description: 'AI Assistant',
+        href: 'https://www.deepseek.ai/',
+        icon: import('@/assets/tools/deepseek.svg?raw')
+      },
+      {
+        name: 'Qoder',
+        description: 'AI Assistant',
+        href: 'https://www.qoder.com/',
+        icon: import('@/assets/tools/qoder.svg?raw')
       }
     ]}
   />
@@ -682,8 +722,8 @@ const headings = [
         color: '#0084ff',
         link: 'https://www.zhihu.com/people/JayChou',
         text: 'followers',
-        count: 2,
-        // api: 'zhihu/JayChou'
+        // count: 2,
+        api: 'zhihu/JayChou'
       },
       {
         platform: 'NetEase Music',

@@ -30,12 +30,16 @@ if ('alt' in attributeOverrides) {
   throw new Error(ALT_NOT_ALLOWED)
 }
 
-if (!svgSource.trimStart().toLowerCase().startsWith('<svg')) {
+// SVG files may legally include an XML declaration or DOCTYPE before their root element.
+// Render only from the root element so those preambles do not reject an otherwise valid SVG.
+const svgStart = svgSource.search(/<svg(?:\s|>)/i)
+
+if (svgStart === -1) {
   throw new Error(`${SVG_NOT_FOUND}, provided: ${svgSource.slice(0, 23)}
   maybe you need to add '?raw' to the end of the import?`)
 }
 
-const contents = overrideSvgAttributes(svgSource, attributeOverrides)
+const contents = overrideSvgAttributes(svgSource.slice(svgStart), attributeOverrides)
 ---
 
 <Fragment set:html={contents} />
