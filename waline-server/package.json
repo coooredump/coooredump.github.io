@@ -1,0 +1,15 @@
+{
+  "name": "waline-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Waline comment server for Core's ink, pinned to a Vercel-compatible release.",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "@waline/vercel": "1.41.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
