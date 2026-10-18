@@ -70,6 +70,7 @@ const GET = async (context: AstroGlobal) => {
     items: await Promise.all(
       allPostsByDate.map(async (post) => ({
         link: `/docs/${post.id}`,
+        categories: post.data.tags,
         content: await renderContent(post, siteUrl),
         ...post.data
       }))

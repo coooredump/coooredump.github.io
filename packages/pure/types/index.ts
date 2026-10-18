@@ -9,6 +9,12 @@ export interface SiteMeta {
   description?: string
   ogImage?: string | undefined
   articleDate?: string | undefined
+  /** ISO date; used for JSON-LD datePublished */
+  publishedDate?: string | undefined
+  /** ISO date; used for JSON-LD dateModified */
+  updatedDate?: string | undefined
+  /** Article tags; used for JSON-LD keywords and article:tag */
+  tags?: string[] | undefined
 }
 
 export type CardListData = {

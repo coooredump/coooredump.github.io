@@ -5,11 +5,58 @@ import config from '@/site-config'
 
 type Props = SiteMeta
 
-const { articleDate, description, ogImage, title } = Astro.props
+const { articleDate, description, ogImage, publishedDate, tags, title, updatedDate } = Astro.props
 
 const siteTitle = `${title} ${config.titleDelimiter} ${config.title}`
 const canonicalURL = new URL(Astro.url.pathname, Astro.site)
-const socialImageURL = new URL(ogImage ? ogImage : '/svg/social-card.png', Astro.url).href
+const siteURL = Astro.site ?? new URL('/', Astro.url)
+const socialImageURL = new URL(ogImage ? ogImage : '/svg/social-card.png', siteURL).href
+const publishedIso = publishedDate ?? articleDate
+const modifiedIso = updatedDate ?? publishedDate ?? articleDate
+
+const sameAs = Object.values(config.footer.social ?? {}).filter(
+  (value): value is string => typeof value === 'string' && /^https?:\/\//.test(value)
+)
+
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      name: config.title,
+      url: siteURL.href,
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: `${siteURL.href}search?q={search_term_string}`,
+        'query-input': 'required name=search_term_string'
+      }
+    },
+    {
+      '@type': 'Person',
+      name: config.author,
+      url: siteURL.href,
+      ...(sameAs.length ? { sameAs } : {})
+    },
+    ...(articleDate
+      ? [
+          {
+            '@type': 'BlogPosting',
+            headline: title,
+            description,
+            image: socialImageURL,
+            datePublished: publishedIso,
+            dateModified: modifiedIso,
+            author: {
+              '@type': 'Person',
+              name: config.author
+            },
+            mainEntityOfPage: canonicalURL.href,
+            ...(tags?.length ? { keywords: tags.join(', ') } : {})
+          }
+        ]
+      : [])
+  ]
+}
 ---
 
 <meta charset='utf-8' />
@@ -25,13 +72,6 @@ const socialImageURL = new URL(ogImage ? ogImage : '/svg/social-card.png', Astro
 
 {/* Font preloads */}
 <link rel='preload' href='/fonts/Satoshi-Variable.ttf' as='font' type='font/ttf' crossorigin />
-<link
-  rel='preload'
-  href='/fonts/Satoshi-VariableItalic.ttf'
-  as='font'
-  type='font/ttf'
-  crossorigin
-/>
 
 {/* Canonical URL */}
 <link rel='canonical' href={canonicalURL} />
@@ -42,7 +82,8 @@ const socialImageURL = new URL(ogImage ? ogImage : '/svg/social-card.png', Astro
 <meta content={config.author} name='author' />
 
 {/* Theme Color */}
-<meta content='' name='theme-color' />
+<meta content='#fbfcfd' media='(prefers-color-scheme: light)' name='theme-color' />
+<meta content='#0b0b10' media='(prefers-color-scheme: dark)' name='theme-color' />
 
 {/* Open Graph / Facebook */}
 <meta content={articleDate ? 'article' : 'website'} property='og:type' />
@@ -52,13 +93,18 @@ const socialImageURL = new URL(ogImage ? ogImage : '/svg/social-card.png', Astro
 <meta content={config.title} property='og:site_name' />
 <meta content={config.locale.attrs} property='og:locale' />
 <meta content={socialImageURL} property='og:image' />
+<meta content={title} property='og:image:alt' />
 <meta content='1200' property='og:image:width' />
 <meta content='630' property='og:image:height' />
 {
   articleDate && (
     <>
       <meta content={config.author} property='article:author' />
-      <meta content={articleDate} property='article:published_time' />
+      {publishedIso && <meta content={publishedIso} property='article:published_time' />}
+      {modifiedIso && <meta content={modifiedIso} property='article:modified_time' />}
+      {tags?.map((tag) => (
+        <meta content={tag} property='article:tag' />
+      ))}
     </>
   )
 }
@@ -70,6 +116,13 @@ const socialImageURL = new URL(ogImage ? ogImage : '/svg/social-card.png', Astro
 <meta content={description} property='twitter:description' />
 <meta content={socialImageURL} property='twitter:image' />
 
+{/* Structured data */}
+<script
+  is:inline
+  type='application/ld+json'
+  set:html={JSON.stringify(structuredData).replace(/</g, '\\u003c')}
+/>
+
 {/* Sitemap */}
 <link href='/sitemap-index.xml' rel='sitemap' />
 
@@ -78,7 +131,7 @@ const socialImageURL = new URL(ogImage ? ogImage : '/svg/social-card.png', Astro
   rel='alternate'
   type='application/rss+xml'
   title={config.title}
-  href={`${Astro.site}rss.xml`}
+  href={new URL('rss.xml', siteURL).href}
 />
 
 <meta content={Astro.generator} name='generator' />
