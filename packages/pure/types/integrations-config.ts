@@ -46,16 +46,30 @@ export const IntegrationConfigSchema = () =>
       options: z.record(z.string(), z.any()).default({ className: 'zoomable' })
     }),
 
-    /** The Waline comment system */
-    waline: z.object({
-      /** Enable the Waline comment system. */
+    /** The Giscus comment system, backed by GitHub Discussions. */
+    giscus: z.object({
+      /** Enable the Giscus comment system. */
       enable: z.boolean().default(false),
-      /** The server to use for the Waline comment system. */
-      server: z.string().optional(),
-      /** The emoji to use for the Waline comment system. */
-      emoji: z.array(z.string()).optional(),
-      /** Additional configurations for the Waline comment system. */
-      additionalConfigs: z.record(z.string(), z.any()).default({})
+      /** Public GitHub repository in owner/name form. */
+      repo: z.string(),
+      /** GitHub repository node ID (R_...). */
+      repoId: z.string(),
+      /** Discussion category name. */
+      category: z.string(),
+      /** Discussion category node ID (DIC_...). */
+      categoryId: z.string(),
+      /** How a page maps to a discussion. */
+      mapping: z.enum(['pathname', 'url', 'title', 'og:title', 'specific']).default('pathname'),
+      /** Use strict title matching. */
+      strict: z.enum(['0', '1']).default('0'),
+      /** Enable reactions on the discussion. */
+      reactionsEnabled: z.enum(['0', '1']).default('1'),
+      /** Place the comment box above or below the comments. */
+      inputPosition: z.enum(['top', 'bottom']).default('bottom'),
+      /** Giscus theme name, or preferred_color_scheme. */
+      theme: z.string().default('preferred_color_scheme'),
+      /** Giscus UI language. */
+      lang: z.string().default('zh-CN')
     })
   })
 

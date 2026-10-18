@@ -1,5 +1,4 @@
 import { rehypeHeadingIds } from '@astrojs/markdown-remark'
-import vercel from '@astrojs/vercel'
 import AstroPureIntegration from 'astro-pure'
 import { defineConfig } from 'astro/config'
 import rehypeKatex from 'rehype-katex'
@@ -32,15 +31,7 @@ export default defineConfig({
 
   // Adapter
   // https://docs.astro.build/en/guides/deploy/
-  // 1. Vercel (serverless)
-  // adapter: vercel(),
   output: 'static',
-  // 2. Vercel (static)
-  // adapter: vercelStatic(),
-  // 3. Local (standalone)
-  // adapter: node({ mode: 'standalone' }),
-  // output: 'server',
-  // ---
 
   image: {
     responsiveStyles: true,
@@ -58,9 +49,6 @@ export default defineConfig({
     //   SVG: false,
     //   Exclude: ['index.*.js']
     // }),
-
-    // Temporary fix vercel adapter
-    // static build method is not needed
   ],
   // root: './my-project-directory',
 
@@ -74,10 +62,13 @@ export default defineConfig({
   markdown: {
     remarkPlugins: [remarkMath],
     rehypePlugins: [
-      [rehypeKatex, {
-        strict: false,
-        trust: true
-      }],
+      [
+        rehypeKatex,
+        {
+          strict: false,
+          trust: true
+        }
+      ],
       rehypeHeadingIds,
       [
         rehypeAutolinkHeadings,

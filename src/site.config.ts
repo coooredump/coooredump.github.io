@@ -149,27 +149,21 @@ export const integ: IntegrationUserConfig = {
       className: 'zoomable'
     }
   },
-  // Comment system
-  // https://waline.js.org/guide/get-started/#vercel-%E9%83%A8%E7%BD%B2-%E6%9C%8D%E5%8A%A1%E7%AB%AF
-  waline: {
+  // Comment system (Giscus / GitHub Discussions)
+  // Setup, IDs and old-comment migration: see GISCUS.md in the repository root.
+  giscus: {
     enable: true,
-    // Server service link
-    // New-comment email notifications are configured in the Waline Vercel
-    // project. See COMMENTS.md in the repository root.
-    server: 'https://waline-silk-phi.vercel.app/',
-    // Refer https://waline.js.org/en/guide/features/emoji.html
-    emoji: ['bmoji', 'weibo'],
-    // Refer https://waline.js.org/en/reference/client/props.html
-    additionalConfigs: {
-      // search: false,
-      pageview: true,
-      comment: true,
-      locale: {
-        reaction0: 'Like',
-        placeholder: 'Welcome to comment. (Email to receive replies. Login is unnecessary)'
-      },
-      imageUploader: false
-    }
+    repo: 'coooredump/coooredump.github.io',
+    repoId: 'R_kgDOQ1i9Sw',
+    category: 'Comments',
+    // Fill this after creating the discussion category; see GISCUS.md.
+    categoryId: 'DIC_kwDOQ1i9S84DI2sy',
+    mapping: 'pathname',
+    strict: '0',
+    reactionsEnabled: '1',
+    inputPosition: 'bottom',
+    theme: 'preferred_color_scheme',
+    lang: 'zh-CN'
   }
 }
 

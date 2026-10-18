@@ -1,0 +1,64 @@
+---
+import { cn } from 'astro-pure/utils'
+import { integ } from '@/site-config'
+
+interface Props {
+  class?: string
+}
+
+const { class: className } = Astro.props
+const giscus = integ.giscus
+const configured = Boolean(giscus.repoId && giscus.categoryId)
+---
+
+{
+  giscus.enable && (
+    <div class={cn('giscus', className)}>
+      {configured ? (
+        <script
+          is:inline
+          src='https://giscus.app/client.js'
+          data-repo={giscus.repo}
+          data-repo-id={giscus.repoId}
+          data-category={giscus.category}
+          data-category-id={giscus.categoryId}
+          data-mapping={giscus.mapping}
+          data-strict={giscus.strict}
+          data-reactions-enabled={giscus.reactionsEnabled}
+          data-emit-metadata='0'
+          data-input-position={giscus.inputPosition}
+          data-theme={giscus.theme}
+          data-lang={giscus.lang}
+          data-loading='lazy'
+          crossorigin='anonymous'
+          async
+        />
+      ) : (
+        import.meta.env.DEV && (
+          <p class='text-sm text-muted-foreground'>
+            Giscus 尚未配置：请在 src/site.config.ts 填写 categoryId，步骤见 GISCUS.md。
+          </p>
+        )
+      )}
+    </div>
+  )
+}
+
+<script is:inline>
+  // Keep the Giscus iframe in sync with the site's light/dark toggle.
+  ;(() => {
+    const syncTheme = () => {
+      const iframe = document.querySelector('iframe.giscus-frame')
+      if (!iframe || !iframe.contentWindow) return
+      const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+      iframe.contentWindow.postMessage({ giscus: { setConfig: { theme } } }, 'https://giscus.app')
+    }
+
+    new MutationObserver(syncTheme).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    })
+    window.addEventListener('load', syncTheme)
+    setTimeout(syncTheme, 2000)
+  })()
+</script>
