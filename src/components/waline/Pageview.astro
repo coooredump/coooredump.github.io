@@ -13,18 +13,35 @@ import config from '@/site-config'
     try {
       const pageview = await import(`${npmCDN}/@waline/client@v3/dist/pageview.js`)
       const el = document.querySelector('.waline-pageview-count')
-      if (el) {
-        pageview.pageviewCount({
-          serverURL: walineServer,
-          path: window.location.pathname
-        })
-      }
+      if (!el) return
+      return pageview.pageviewCount({
+        serverURL: walineServer,
+        path: window.location.pathname
+      })
     } catch (e) {
       console.error('Failed to load Waline pageview:', e)
     }
   }
 
-  const abort = await loadPageview()
-  // After 500ms, if the network request has not been completed, cancel this operation
-  setTimeout(() => abort(), 500)
+  function start() {
+    void loadPageview().then((abort) => {
+      // The count request is cheap, but don't leave it hanging forever on a
+      // slow network. 500ms was too aggressive for mobile connections.
+      if (typeof abort === 'function') setTimeout(() => abort(), 5000)
+    })
+  }
+
+  function schedule() {
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(start, { timeout: 2000 })
+    } else {
+      setTimeout(start, 1500)
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', schedule, { once: true })
+  } else {
+    schedule()
+  }
 </script>

@@ -35,9 +35,16 @@ const { class: className } = Astro.props
     connectedCallback() {
       // Because virtual:config can only be accessed using json string, function cannot work, so we need to use new Function
       const targetFunction = new Function('return ' + quote.target)()
-      fetch(quote.server)
+      const signal =
+        typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal
+          ? AbortSignal.timeout(3000)
+          : undefined
+      fetch(quote.server, { signal })
         .then((response) => response.json())
         .then((data) => this.render(targetFunction(data)))
+        .catch(() => {
+          // Keep the default sentence when the quote service is unavailable.
+        })
     }
   }
   customElements.define('quote-component', Quote)

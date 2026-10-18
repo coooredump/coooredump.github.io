@@ -19,18 +19,22 @@ const { class: className } = Astro.props
 }
 
 <script>
-  import { init as walineInit } from '@waline/client'
   import type { WalineEmojiPresets } from '@waline/client'
   import config from 'virtual:config'
 
   const walineConfig = config.integ.waline
 
   class Comment extends HTMLElement {
+    private started = false
+
     constructor() {
       super()
     }
 
-    connectedCallback() {
+    private async start() {
+      if (this.started) return
+      this.started = true
+
       // Prevent Vue log errors
       ;(globalThis as unknown as { __VUE_OPTIONS_API__: boolean }).__VUE_OPTIONS_API__ = true
       ;(globalThis as unknown as { __VUE_PROD_DEVTOOLS__: boolean }).__VUE_PROD_DEVTOOLS__ = false
@@ -42,13 +46,42 @@ const { class: className } = Astro.props
         (preset) => `${config.npmCDN}/@waline/emojis@1.2.0/${preset}` as WalineEmojiPresets
       )
 
-      walineInit({
-        el: '#waline',
-        serverURL: walineConfig.server || '',
-        emoji,
-        reaction: ['/icons/heart-item.svg'],
-        ...walineConfig.additionalConfigs
-      })
+      try {
+        const { init: walineInit } = await import('@waline/client')
+        walineInit({
+          el: '#waline',
+          serverURL: walineConfig.server || '',
+          emoji,
+          reaction: ['/icons/heart-item.svg'],
+          ...walineConfig.additionalConfigs
+        })
+      } catch (error) {
+        const target = this.querySelector('#waline')
+        if (target) target.textContent = '评论加载失败，请刷新页面重试。'
+        console.error('Failed to load Waline comments:', error)
+      }
+    }
+
+    connectedCallback() {
+      const target = this.querySelector('#waline')
+      if (!target) return
+
+      // Comments live below the article; don't pay the Waline JS cost until
+      // the reader is close to them.
+      if (typeof IntersectionObserver === 'undefined') {
+        void this.start()
+        return
+      }
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (!entries.some((entry) => entry.isIntersecting)) return
+          observer.disconnect()
+          void this.start()
+        },
+        { rootMargin: '400px 0px' }
+      )
+      observer.observe(target)
     }
   }
 
