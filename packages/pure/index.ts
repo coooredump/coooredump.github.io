@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { dirname, relative } from 'node:path'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 // Astro
 import type { AstroIntegration, RehypePlugins, RemarkPlugins } from 'astro'
@@ -89,17 +89,42 @@ export default function AstroPureIntegration(opts: UserInputConfig): AstroIntegr
         })
       },
 
-      'astro:build:done': ({ dir }) => {
+      'astro:build:done': ({ dir, logger }) => {
         if (!opts.integ.pagefind) return
         const targetDir = fileURLToPath(dir)
-        const cwd = dirname(fileURLToPath(import.meta.url))
-        const relativeDir = relative(cwd, targetDir)
-        return new Promise<void>((resolve) => {
-          spawn('npx', ['-y', 'pagefind', '--site', relativeDir], {
+
+        // Resolve the Pagefind binary from the package itself instead of a
+        // hard-coded packages/pure/node_modules path. In CI the dependency may
+        // be hoisted to the repository root, so import.meta.resolve follows the
+        // actual installation. The .bin lookup is only a fallback for Node
+        // versions without import.meta.resolve.
+        let pagefindBin: string
+        try {
+          const resolve = (import.meta as ImportMeta & { resolve?: (id: string) => string }).resolve
+          const entry = resolve?.('pagefind')
+          if (!entry) throw new Error('import.meta.resolve is unavailable')
+          pagefindBin = fileURLToPath(new URL('./runner/bin.cjs', entry))
+        } catch {
+          pagefindBin = join(process.cwd(), 'node_modules', '.bin', 'pagefind')
+        }
+
+        return new Promise<void>((resolve, reject) => {
+          const child = spawn(process.execPath, [pagefindBin, '--site', targetDir], {
             stdio: 'inherit',
-            shell: true,
-            cwd
-          }).on('close', () => resolve())
+            cwd: process.cwd()
+          })
+
+          child.on('error', (error) => {
+            reject(new Error(`Unable to start Pagefind: ${error.message}`, { cause: error }))
+          })
+          child.on('close', (code) => {
+            if (code === 0) {
+              logger.info('Pagefind search index generated.')
+              resolve()
+              return
+            }
+            reject(new Error(`Pagefind exited with code ${code ?? 'unknown'}.`))
+          })
         })
       }
     }

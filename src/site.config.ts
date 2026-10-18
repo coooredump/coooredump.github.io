@@ -12,8 +12,10 @@ export const theme: ThemeUserConfig = {
   favicon: '/favicon/favicon.ico',
   /** Specify the default language for this site. */
   locale: {
-    lang: 'en-US',
-    attrs: 'en_US',
+    // Pagefind uses this value to choose its tokenizer. Most posts are Chinese,
+    // so an English document language causes Chinese terms to be indexed poorly.
+    lang: 'zh-CN',
+    attrs: 'zh_CN',
     // Date locale
     dateLocale: 'en-US',
     dateOptions: {

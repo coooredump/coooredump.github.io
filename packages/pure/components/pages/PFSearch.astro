@@ -32,7 +32,7 @@ import '@pagefind/default-ui/css/ui.css'
         onIdle(async () => {
           // @ts-expect-error — Missing types for @pagefind/default-ui package.
           const { PagefindUI } = await import('@pagefind/default-ui')
-          new PagefindUI({
+          const search = new PagefindUI({
             element: '#site-search',
             baseUrl: import.meta.env.BASE_URL,
             bundlePath: import.meta.env.BASE_URL.replace(/\/$/, '') + '/pagefind/',
@@ -46,6 +46,13 @@ import '@pagefind/default-ui/css/ui.css'
               })
             }
           })
+
+          // Keep the JSON-LD SearchAction working: /search?q=...
+          const initialQuery = new URLSearchParams(window.location.search).get('q')
+          if (initialQuery) {
+            // Let Pagefind UI finish its async initialization before triggering.
+            window.setTimeout(() => search.triggerSearch(initialQuery), 300)
+          }
         })
       })
     }
@@ -66,5 +73,10 @@ import '@pagefind/default-ui/css/ui.css'
     --pagefind-ui-image-border-radius: calc(var(--radius) + 2px);
     --pagefind-ui-image-box-ratio: 3 / 2;
     --pagefind-ui-font: sans-serif;
+  }
+
+  /* Metadata is used for search ranking, not as an extra strip under results. */
+  #site-search :global(.pagefind-ui__result-tags) {
+    display: none;
   }
 </style>

@@ -1,0 +1,24 @@
+---
+/**
+ * Pagefind metadata for a content page.
+ *
+ * The element is visually hidden but intentionally NOT `data-pagefind-ignore`:
+ * Pagefind reads these attributes regardless of CSS, and the values are applied
+ * to the page even when they are outside `data-pagefind-body`.
+ */
+interface Props {
+  title: string
+  description?: string
+  date?: Date
+}
+
+const { title, description, date } = Astro.props
+
+const validDate = date && !Number.isNaN(date.valueOf()) ? date : undefined
+---
+
+<div class='sr-only' aria-hidden='true'>
+  <span data-pagefind-meta={`title:${title}`}></span>
+  {description && <span data-pagefind-meta={`description:${description}`} />}
+  {validDate && <time datetime={validDate.toISOString()} data-pagefind-meta='date[datetime]' />}
+</div>

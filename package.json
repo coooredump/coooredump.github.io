@@ -6,6 +6,8 @@
     "dev": "astro dev",
     "dev:check": "astro check --watch & astro dev",
     "build": "astro-pure check && astro check && astro build",
+    "postbuild": "node scripts/verify-search.mjs",
+    "test:search": "node scripts/verify-search.mjs",
     "preview": "astro preview",
     "sync": "astro sync",
     "check": "astro check",
