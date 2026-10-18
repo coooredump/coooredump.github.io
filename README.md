@@ -84,6 +84,16 @@ bun preview
 bun new
 ```
 
+## Comments
+
+Comments are powered by Waline. New-comment and reply email notifications are
+configured on the Waline Vercel project, not in this static site. See
+[COMMENTS.md](./COMMENTS.md) for the QQ SMTP setup, Vercel environment
+variables, email templates, verification checklist and troubleshooting.
+
+The comment backend can also be rebuilt as a separate Vercel project; see
+[waline-server/README.md](./waline-server/README.md).
+
 ## Contributions
 
 To spend more time coding and less time fiddling with whitespace, this project uses code conventions and styles to encourage consistency. Code with a consistent style is easier (and less error-prone!) to review, maintain, and understand.

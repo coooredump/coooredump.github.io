@@ -72,7 +72,7 @@ export const theme: ThemeUserConfig = {
     /** Optional details about the social media accounts for this site. */
     social: {
       github: 'https://github.com/Wu-yikun',
-      email: "mailto:wuyikun@stu.xmu.edu.cn",
+      email: 'mailto:wuyikun@stu.xmu.edu.cn'
       // zhihu: "https://www.zhihu.com/people/JayChou",
       // netease: "https://music.163.com/#/user/home?id=1479129382",
       // tiktok: 'https://www.douyin.com/user/MS4wLjABAAAAzWc63J3lkEwARMZWBU39myy7MtgZj81ZkrI06Bt3TWKsM2SikoTWYRH12iCYJxJ6',
@@ -154,6 +154,8 @@ export const integ: IntegrationUserConfig = {
   waline: {
     enable: true,
     // Server service link
+    // New-comment email notifications are configured in the Waline Vercel
+    // project. See COMMENTS.md in the repository root.
     server: 'https://waline-silk-phi.vercel.app/',
     // Refer https://waline.js.org/en/guide/features/emoji.html
     emoji: ['bmoji', 'weibo'],
