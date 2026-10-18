@@ -155,8 +155,9 @@ export const integ: IntegrationUserConfig = {
     enable: true,
     repo: 'coooredump/coooredump.github.io',
     repoId: 'R_kgDOQ1i9Sw',
-    category: 'Comments',
-    // Fill this after creating the discussion category; see GISCUS.md.
+    // Must match the actual GitHub Discussions category name.
+    category: 'Announcements',
+    // Must be the node ID of the same category.
     categoryId: 'DIC_kwDOQ1i9S84DI2sy',
     mapping: 'pathname',
     strict: '0',

@@ -26,15 +26,21 @@ https://github.com/apps/giscus
 
 点击 Install → 选择 `coooredump/coooredump.github.io`。
 
-## 3. 创建讨论分类
+## 3. 选择讨论分类
 
-仓库 → Discussions → 分类旁的编辑按钮 → New category：
+当前仓库使用 GitHub 默认的 `Announcements` 分类，已有 discussion 也在这个分类里。
 
-- 名称：`Comments`
-- 类型：`Announcements`（推荐，只有维护者/giscus 能创建新讨论）
+**Giscus 的 `category` 名称必须和 GitHub 实际分类完全一致，`categoryId` 也必须
+是同一个分类的 ID。**
 
-如果已经有合适的分类，也可以直接用现有分类，但要同步修改
-[site.config.ts](src/site.config.ts) 里的 `giscus.category`。
+如果名称和 ID 对不上，Giscus API 会返回 `404 Discussion not found`，页面表现就是：
+
+- 评论区能打开
+- 但列表显示 0 条
+- 登录后仍然看不到已有评论
+
+如果你新建一个 `Comments` 分类，必须同时更新 `giscus.category` 和
+`giscus.categoryId`；否则就用现有的 `Announcements`，不要只改名字。
 
 ## 4. 填写 repoId / categoryId
 
@@ -47,7 +53,7 @@ https://giscus.app
 按页面填写：
 
 - Repository：`coooredump/coooredump.github.io`
-- Discussion category：`Comments`
+- Discussion category：`Announcements`
 - Mapping：`pathname`
 - 其他保持默认即可
 
@@ -64,8 +70,8 @@ giscus: {
   enable: true,
   repo: 'coooredump/coooredump.github.io',
   repoId: 'R_kgDOQ1i9Sw', // 已填；以 giscus.app 生成的值为准
-  category: 'Comments',
-  categoryId: 'DIC_xxx', // 必填
+  category: 'Announcements',
+  categoryId: 'DIC_kwDOQ1i9S84DI2sy', // 必须是 Announcements 分类的 ID
   mapping: 'pathname',
   strict: '0',
   reactionsEnabled: '1',
@@ -88,7 +94,7 @@ npm run preview
 
 - 评论区出现 Giscus iframe
 - GitHub 登录后可以发评论
-- 评论出现在仓库 Discussions 的 `Comments` 分类
+- 评论出现在仓库 Discussions 的 `Announcements` 分类
 - 回复、reaction 正常
 - 切换站点明暗主题时 iframe 跟随
 
@@ -186,7 +192,7 @@ node scripts/migrate-waline-to-giscus.mjs waline-comments.json --apply
 
 - Discussion 标题是否包含页面完整 `pathname`（带不带末尾 `/`）
 - `giscus.mapping` 是否为 `pathname`
-- `categoryId` 是否对应 `Comments` 分类
+- `categoryId` 是否对应 `Announcements` 分类
 
 ## 8. 备份与清理
 

@@ -20,7 +20,7 @@ import process from 'node:process'
 
 const GITHUB_GRAPHQL = 'https://api.github.com/graphql'
 const DEFAULT_REPO = 'coooredump/coooredump.github.io'
-const DEFAULT_CATEGORY = 'Comments'
+const DEFAULT_CATEGORY = 'Announcements'
 const MARKER = /<!--\s*waline:([^\s>]+)\s*-->/g
 
 const args = process.argv.slice(2)
