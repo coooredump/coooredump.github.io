@@ -24,18 +24,23 @@ export function generateToc(headings: readonly MarkdownHeading[]) {
     // add h2 elements into the top level
     if (heading.depth === 2) {
       toc.push(heading)
-    } else {
-      const lastItemInToc = toc[toc.length - 1]!
-      if (heading.depth < lastItemInToc.depth) {
-        throw new Error(`Orphan heading found: ${heading.text}.`)
-      }
-
-      // higher depth
-      // push into children, or children's children
-      const gap = heading.depth - lastItemInToc.depth
-      const target = diveChildren(lastItemInToc, gap)
-      target.push(heading)
+      return
     }
+
+    const lastItemInToc = toc[toc.length - 1]
+    // A malformed or draft article can start with ### before any ##.
+    // Ignore that orphan heading instead of crashing the whole page.
+    if (!lastItemInToc) return
+
+    if (heading.depth < lastItemInToc.depth) {
+      throw new Error(`Orphan heading found: ${heading.text}.`)
+    }
+
+    // higher depth
+    // push into children, or children's children
+    const gap = heading.depth - lastItemInToc.depth
+    const target = diveChildren(lastItemInToc, gap)
+    target.push(heading)
   })
   return toc
 }
