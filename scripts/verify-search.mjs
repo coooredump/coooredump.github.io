@@ -135,7 +135,7 @@ const dali = await search('大理')
 assert.ok(dali.results.length > 0, '[verify-search] "大理" returned no results')
 const daliData = await dataOf({ results: dali.results.slice(0, 3) })
 assert.ok(
-  daliData[0]?.url.includes('/blog/tourism/dali_2026-10-03/'),
+  daliData[0]?.url.includes('/blog/tourism/2026-10-03-dali/'),
   `[verify-search] expected the Dali post first, got ${daliData[0]?.url}`
 )
 assert.ok(
