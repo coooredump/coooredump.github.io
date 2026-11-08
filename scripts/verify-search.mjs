@@ -146,25 +146,51 @@ assert.ok(
 )
 console.log('[verify-search] "大理" top result and body scope are correct')
 
-const yunnan = await search('云南')
-const yunnanData = await dataOf(yunnan)
-const yunnanExact = yunnanData.filter((data) => exactMatch('云南', haystack(data)))
-assert.equal(
-  yunnanExact.length,
-  0,
-  `[verify-search] exact "云南" should be empty, got ${yunnanExact.length}`
-)
-console.log(`[verify-search] exact "云南": 0 of ${yunnan.results.length} segmented matches`)
+// Chinese queries are segmented before matching, so Pagefind may return pages
+// that never contain the phrase. These checks guard both directions without
+// pinning results to the current content, which changes whenever a post is
+// added, renamed or retitled.
+async function exactUrlsOf(term) {
+  const result = await search(term)
+  const data = await dataOf(result)
+  const urls = data.filter((row) => exactMatch(term, haystack(row))).map((row) => row.url)
+  return { total: result.results.length, urls: [...new Set(urls)].sort() }
+}
 
-const os = await search('操作系统')
-const osData = await dataOf(os)
-const osExact = osData.filter((data) => exactMatch('操作系统', haystack(data)))
-assert.ok(osExact.length > 0, '[verify-search] exact "操作系统" returned no results')
+// `云南` now prefixes the Yunnan travel post titles (云南·昆明/大理/丽江), so the
+// phrase is expected to hit articles — never tag, list or paginated pages.
+const yunnan = await exactUrlsOf('云南')
 assert.ok(
-  osExact[0].url.includes('/blog/recruitment/2025-os/'),
-  `[verify-search] expected the OS post first for exact "操作系统", got ${osExact[0].url}`
+  yunnan.urls.length > 0,
+  `[verify-search] exact "云南" matched no page at all (${yunnan.total} segmented matches)`
 )
-console.log(`[verify-search] exact "操作系统": ${osExact.length} of ${os.results.length} matches`)
+for (const url of yunnan.urls) {
+  assert.ok(
+    url.startsWith('/blog/') && !/^\/blog\/\d+\/$/.test(url),
+    `[verify-search] exact "云南" matched a non-article page: ${url}`
+  )
+}
+console.log(
+  `[verify-search] exact "云南": ${yunnan.urls.length} of ${yunnan.total} segmented matches, all articles`
+)
+
+// Nothing in the content contains this, so no page may match it exactly: it
+// proves CJK segmentation alone cannot fabricate an exact phrase match.
+const nonsense = await exactUrlsOf('银河系之外的鸭子')
+assert.equal(
+  nonsense.urls.length,
+  0,
+  `[verify-search] exact "银河系之外的鸭子" should be empty, got ${nonsense.urls.length}: ${nonsense.urls.join(', ')}`
+)
+console.log(`[verify-search] exact "银河系之外的鸭子": 0 of ${nonsense.total} segmented matches`)
+
+const os = await exactUrlsOf('操作系统')
+assert.ok(os.urls.length > 0, '[verify-search] exact "操作系统" returned no results')
+assert.ok(
+  os.urls.includes('/blog/recruitment/2025-os/'),
+  `[verify-search] expected "操作系统" to match the OS post, got ${os.urls.join(', ')}`
+)
+console.log(`[verify-search] exact "操作系统": ${os.urls.length} of ${os.total} segmented matches`)
 
 // --- Tag filter sidebar ----------------------------------------------------
 const filters = await pagefind.filters()
