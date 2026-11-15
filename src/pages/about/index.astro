@@ -1,6 +1,7 @@
 ---
-import { Aside, Card, TabItem, Tabs, Timeline } from 'astro-pure/user'
+import { Card, TabItem, Tabs } from 'astro-pure/user'
 import PageLayout from '@/layouts/CommonPage.astro'
+import ChinaTravelMap from '@/components/about/ChinaTravelMap.astro'
 import List from '@/components/about/List.astro'
 import Substats from '@/components/about/Substats.astro'
 import ToolSection from '@/components/about/ToolSection.astro'
@@ -29,7 +30,7 @@ const headings = [
   </p>
 
   {/* Coredump */}
-  <h2 id='Coredump'>Coredump</h2>
+  <h2 id='coredump'>Coredump</h2>
 
   <Tabs>
     {/* Tourism */}
@@ -38,114 +39,7 @@ const headings = [
         中学的时候喜欢看意林之类的杂志，里面的作者用乱七八糟的理由跑去旅游，然后说“阻碍你脚步的永远只有逃离的勇气和对生活的热爱”。
       </p>
       <p>我觉得太对了，可惜 12306 付款方式里没有勇气和热爱，不知道是不是下了盗版。</p>
-      <Timeline
-        events={[
-          {
-            date: '2026.10.05',
-            content:
-              '<a href="../blog/tourism/2026-10-05-lijiang">丽江</a>'
-          },
-          {
-            date: '2026.10.03',
-            content:
-              '<a href="../blog/tourism/2026-10-03-dali">大理</a>'
-          },
-          {
-            date: '2026.10.01',
-            content:
-              '<a href="../blog/tourism/2026-10-01-kunming">昆明</a>'
-          },
-          {
-            date: '2026.09.14',
-            content:
-              '<a href="../blog/tourism/2026-09-14-beijing">北京</a>'
-          },
-          {
-            date: '2026.06.19',
-            content:
-              '<a href="../blog/tourism/2026-06-19-beijing">北京</a>'
-          },
-          {
-            date: '2026.05.01',
-            content:
-              '<a href="../blog/tourism/2026-05-01-ganzhou">赣州</a>'
-          },
-          {
-            date: '2026.04.03',
-            content:
-              '<a href="../blog/tourism/2026-04-03-chaozhou">潮州</a>'
-          },
-          {
-            date: '2025.06.14',
-            content: '<a href="../blog/tourism/2025-06-14-fuzhou">福州</a>'
-          },
-          {
-            date: '2024.11.29',
-            content:
-              '<a href="../blog/tourism/2024-11-29-guangzhou">广州</a>'
-          },
-          {
-            date: '2024.10.30',
-            content:
-              '<a href="../blog/tourism/2024-10-30-dongshandao">漳州</a>'
-          },
-          {
-            date: '2024.10.01',
-            content: '<a href="../blog/tourism/2024-10-01-fuzhou">福州</a>'
-          },
-          {
-            date: '2024.07.27',
-            content:
-              '<a href="../blog/tourism/2024-07-27-yinchuan">银川</a>'
-          },
-          {
-            date: '2024.07.14',
-            content:
-              '<a href="../blog/tourism/2024-07-14-chengdu">成都</a>'
-          },
-          {
-            date: '2024.06.24',
-            content: '<a href="../blog/tourism/2024-06-24-xi%27an/">西安</a>'
-          },
-          {
-            date: '2024.06.15',
-            content:
-              '<a href="../blog/tourism/2024-06-15-hangzhou">杭州</a>'
-          },
-          {
-            date: '2024.05.01',
-            content:
-              '<a href="../blog/tourism/2024-05-01-zhangzhou">漳州</a>'
-          },
-          {
-            date: '2024.01.28',
-            content:
-              '<a href="../blog/tourism/2024-01-28-quanzhou">泉州</a>'
-          },
-          {
-            date: '2023.12.24',
-            content: '<a href="../blog/tourism/2023-12-24-xiamen">厦门</a>'
-          },
-          {
-            date: '2023.10.27',
-            content:
-              '<a href="../blog/tourism/2023-10-27-shenzhen">深圳</a>'
-          },
-          {
-            date: '2023.06.14',
-            content: '<a href="../blog/tourism/2023-06-14-fjnu">福州</a>'
-          },
-          {
-            date: '2023.04.28',
-            content:
-              '<a href="../blog/tourism/2023-04-28-hangzhou">杭州</a>'
-          },
-          {
-            date: '2023.04.04',
-            content: '<a href="../blog/tourism/2023-04-04-wuhan">武汉</a>'
-          }
-        ]}
-      />
+      <ChinaTravelMap />
     </TabItem>
 
     {/* Music */}

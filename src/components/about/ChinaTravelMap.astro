@@ -1,0 +1,876 @@
+---
+import { getCollection } from 'astro:content'
+import { chinaCities } from '@/data/china-cities.generated'
+import {
+  CHINA_MAP_VIEWBOX,
+  chinaProvinces,
+  cityPoints,
+  southChinaSea
+} from '@/data/china-map.generated'
+
+interface Trip {
+  id: string
+  title: string
+  province: string
+  city: string
+  date: string
+  description: string
+  href: string
+}
+
+interface CityGroup {
+  city: string
+  trips: Trip[]
+  latest: string
+}
+
+interface CityEntry {
+  name: string
+  fullName: string
+  point: [number, number]
+  visits: Trip[]
+  visitCount: number
+  visited: boolean
+}
+
+interface ProvinceEntry {
+  short: string
+  adcode: number
+  label: [number, number]
+  labelOffset: [number, number]
+  mobileLabelOffset: [number, number]
+  visited: boolean
+  trips: Trip[]
+  cities: CityEntry[]
+  visitedCityCount: number
+  totalCityCount: number
+  latest: string
+}
+
+const PROVINCE_MOBILE_OFFSETS: Record<string, [number, number]> = {
+  天津: [0, -4],
+  河北: [0, -6],
+  安徽: [0, -14],
+  福建: [0, -8],
+  江西: [0, -4]
+}
+
+const PROVINCE_LABEL_OFFSETS: Record<string, [number, number]> = {
+  北京: [0, -13],
+  天津: [15, 11],
+  河北: [-14, 10],
+  上海: [15, 7],
+  江苏: [0, -9],
+  浙江: [0, 11],
+  安徽: [-10, -7],
+  福建: [11, 7],
+  江西: [-11, -7],
+  河南: [8, 9],
+  香港: [13, 10],
+  澳门: [-12, 15],
+  广东: [0, -10],
+  海南: [0, 9],
+  宁夏: [0, -7],
+  重庆: [-7, 6]
+}
+
+const pad = (value: number) => String(value).padStart(2, '0')
+const posts = (await getCollection('blog'))
+  .filter((post) => !post.data.draft && post.data.tags.includes('旅游'))
+  .sort((a, b) => b.data.publishDate.getTime() - a.data.publishDate.getTime())
+
+const trips: Trip[] = posts.map((post) => {
+  const parts = post.data.title
+    .split('·')
+    .map((part) => part.trim())
+    .filter(Boolean)
+  const province = post.data.province ?? parts[0] ?? '未分类'
+  const city = post.data.city ?? parts[1] ?? parts[0] ?? '未分类'
+  const date = post.data.publishDate
+  return {
+    id: post.id,
+    title: post.data.title,
+    province,
+    city,
+    date: `${date.getUTCFullYear()}.${pad(date.getUTCMonth() + 1)}.${pad(date.getUTCDate())}`,
+    description: post.data.description ?? '',
+    href: `/blog/${post.id}`
+  }
+})
+
+const provinceMap = new Map<string, Trip[]>()
+for (const trip of trips) {
+  const list = provinceMap.get(trip.province) ?? []
+  list.push(trip)
+  provinceMap.set(trip.province, list)
+}
+
+const recordGroups = new Map<string, CityGroup[]>()
+for (const [province, provinceTrips] of provinceMap) {
+  const cityMap = new Map<string, Trip[]>()
+  for (const trip of provinceTrips) {
+    const list = cityMap.get(trip.city) ?? []
+    list.push(trip)
+    cityMap.set(trip.city, list)
+  }
+  recordGroups.set(
+    province,
+    [...cityMap.entries()]
+      .map(([city, cityTrips]) => ({
+        city,
+        trips: cityTrips,
+        latest: cityTrips[0].date
+      }))
+      .sort((a, b) => b.latest.localeCompare(a.latest))
+  )
+}
+
+const provinceEntries: ProvinceEntry[] = chinaProvinces.map((province) => {
+  const provinceTrips = provinceMap.get(province.short) ?? []
+  const records = new Map((recordGroups.get(province.short) ?? []).map((city) => [city.city, city]))
+  const sourceCities = chinaCities[province.short] ?? []
+  const cities: CityEntry[] = sourceCities.map((city) => {
+    const record = records.get(city.name)
+    return {
+      name: city.name,
+      fullName: city.fullName,
+      point: city.point,
+      visits: record?.trips ?? [],
+      visitCount: record?.trips.length ?? 0,
+      visited: Boolean(record)
+    }
+  })
+
+  for (const record of recordGroups.get(province.short) ?? []) {
+    if (cities.some((city) => city.name === record.city)) continue
+    cities.push({
+      name: record.city,
+      fullName: record.city,
+      point: cityPoints[record.city] ?? province.label,
+      visits: record.trips,
+      visitCount: record.trips.length,
+      visited: true
+    })
+  }
+
+  const labelOffset = PROVINCE_LABEL_OFFSETS[province.short] ?? [0, 0]
+  return {
+    short: province.short,
+    adcode: province.adcode,
+    label: province.label,
+    labelOffset,
+    mobileLabelOffset: PROVINCE_MOBILE_OFFSETS[province.short] ?? [0, 0],
+    visited: provinceTrips.length > 0,
+    trips: provinceTrips,
+    cities,
+    visitedCityCount: cities.filter((city) => city.visited).length,
+    totalCityCount: cities.length,
+    latest: provinceTrips[0]?.date ?? ''
+  }
+})
+
+const visitedProvinces = provinceEntries.filter((province) => province.visited)
+const visitedCityCount = visitedProvinces.reduce(
+  (sum, province) => sum + province.visitedCityCount,
+  0
+)
+
+const records: Record<string, { date: string; description: string; href: string }[]> = {}
+for (const province of visitedProvinces) {
+  for (const city of province.cities.filter((entry) => entry.visited)) {
+    records[`${province.short}|${city.name}`] = city.visits.map((trip) => ({
+      date: trip.date,
+      description: trip.description,
+      href: trip.href
+    }))
+  }
+}
+
+const payload = {
+  base: import.meta.env.BASE_URL,
+  provinces: provinceEntries.map((province) => ({
+    short: province.short,
+    adcode: province.adcode,
+    visited: province.visited,
+    cities: province.cities.map((city) => ({
+      name: city.name,
+      point: city.point,
+      visited: city.visited,
+      count: city.visitCount
+    }))
+  })),
+  records
+}
+const payloadJson = JSON.stringify(payload).replace(/</g, '\\u003c')
+---
+
+{/* Map geometry: DataV.GeoAtlas / AMap administrative boundaries. */}
+<div class='travel-map' data-travel-map data-pagefind-ignore>
+  <div class='tm-metrics' aria-label='旅行统计'>
+    <div class='tm-metric'>
+      <span class='tm-metric-head'>
+        <span class='tm-metric-value'>{visitedProvinces.length}</span>
+        <span class='tm-metric-label'>省份</span>
+      </span>
+      <span class='tm-metric-ticks' aria-hidden='true'>
+        {Array.from({ length: visitedProvinces.length }).map(() => <span class='tm-metric-tick' />)}
+      </span>
+    </div>
+    <div class='tm-metric'>
+      <span class='tm-metric-head'>
+        <span class='tm-metric-value'>{visitedCityCount}</span>
+        <span class='tm-metric-label'>城市</span>
+      </span>
+      <span class='tm-metric-ticks' aria-hidden='true'>
+        {Array.from({ length: visitedCityCount }).map(() => <span class='tm-metric-tick' />)}
+      </span>
+    </div>
+    <div class='tm-metric'>
+      <span class='tm-metric-head'>
+        <span class='tm-metric-value'>{trips.length}</span>
+        <span class='tm-metric-label'>旅行</span>
+      </span>
+      <span class='tm-metric-ticks' aria-hidden='true'>
+        {Array.from({ length: trips.length }).map(() => <span class='tm-metric-tick' />)}
+      </span>
+    </div>
+  </div>
+
+  <div class='tm-stage' data-map-stage>
+    <svg
+      class='tm-svg'
+      viewBox={CHINA_MAP_VIEWBOX}
+      role='img'
+      aria-label='中国旅行地图，选择省份查看城市边界，选择城市查看旅行记录'
+      data-map-svg
+    >
+      <rect class='tm-sea' x='0' y='0' width='1000' height='820'></rect>
+
+      <g class='tm-provinces'>
+        {
+          provinceEntries.map((province) => (
+            <path
+              class:list={['tm-province', province.visited && 'is-visited']}
+              d={chinaProvinces.find((item) => item.short === province.short)?.d ?? ''}
+              data-province={province.short}
+              data-adcode={province.adcode}
+            />
+          ))
+        }
+      </g>
+
+      <g class='tm-province-labels' aria-hidden='true'>
+        {
+          provinceEntries.map((province) => (
+            <text
+              class:list={['tm-province-label', province.visited && 'is-visited']}
+              x={province.label[0]}
+              y={province.label[1]}
+              text-anchor='middle'
+              dominant-baseline='middle'
+              data-province={province.short}
+              data-base-x={province.label[0]}
+              data-base-y={province.label[1]}
+              data-offset-x={province.labelOffset[0]}
+              data-offset-y={province.labelOffset[1]}
+              data-mobile-offset-x={province.mobileLabelOffset[0]}
+              data-mobile-offset-y={province.mobileLabelOffset[1]}
+            >
+              {province.short}
+            </text>
+          ))
+        }
+      </g>
+
+      <g class='tm-city-cells' data-city-cells></g>
+
+      <g class='tm-inset' aria-hidden='true'>
+        <rect
+          class='tm-inset-box'
+          x={southChinaSea.box.x}
+          y={southChinaSea.box.y}
+          width={southChinaSea.box.width}
+          height={southChinaSea.box.height}
+          rx='4'></rect>
+        <text
+          class='tm-inset-label'
+          x={southChinaSea.label[0]}
+          y={southChinaSea.label[1]}
+          text-anchor='middle'
+        >
+          南海诸岛
+        </text>
+        <path class='tm-inset-dash' d={southChinaSea.d}></path>
+        {
+          southChinaSea.islands.map(([x, y]) => (
+            <circle class='tm-inset-island' cx={x} cy={y} r='1.5' />
+          ))
+        }
+      </g>
+    </svg>
+
+    <button class='tm-back' type='button' data-map-back hidden aria-label='返回全国'>
+      <span aria-hidden='true'>↩</span>
+      <span>全国</span>
+    </button>
+
+    <div class='tm-record' data-city-record hidden aria-live='polite'>
+      <button class='tm-record-close' type='button' data-record-close aria-label='关闭旅行记录'>
+        ×
+      </button>
+      <strong class='tm-record-city' data-record-city></strong>
+      <ul class='tm-record-list' data-record-list></ul>
+    </div>
+  </div>
+
+  <script type='application/json' data-map-payload is:inline set:html={payloadJson} />
+</div>
+
+<script>
+  import { initTravelMap } from '../../scripts/travel-map'
+
+  initTravelMap()
+</script>
+
+<style>
+  .travel-map {
+    --tm-sea: hsl(203 42% 93%);
+    --tm-land: hsl(40 22% 97%);
+    --tm-visited: hsl(var(--primary) / 0.14);
+    --tm-boundary: hsl(210 10% 58% / 0.52);
+    --tm-province-ink: hsl(220 10% 38%);
+    --tm-city-ink: hsl(220 12% 34%);
+    --tm-accent: hsl(8 72% 52%);
+    --tm-accent-soft: hsl(8 72% 52% / 0.16);
+    position: relative;
+    margin: 1.75rem 0 1.25rem;
+    overflow: hidden;
+    border: 1px solid hsl(var(--border));
+    border-radius: calc(var(--radius) + 4px);
+    background: var(--tm-sea);
+    font-size: 0.875rem;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .travel-map :is(button, a, [tabindex]):focus,
+  .travel-map :is(button, a, [tabindex]):focus-visible {
+    outline: none;
+  }
+
+  /* ---- Metrics ---- */
+  .tm-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-bottom: 1px solid hsl(var(--border) / 0.7);
+    background: hsl(var(--card) / 0.72);
+    backdrop-filter: blur(10px);
+  }
+
+  .tm-metric {
+    --tm-stat-size: clamp(2.35rem, 4.5vw, 3.15rem);
+    position: relative;
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    padding: 0.95rem 1.15rem 0.8rem;
+  }
+
+  .tm-metric + .tm-metric::before {
+    position: absolute;
+    top: 16%;
+    bottom: 16%;
+    left: 0;
+    width: 1px;
+    background: hsl(var(--border) / 0.7);
+    content: '';
+  }
+
+  .tm-metric-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.55rem;
+    white-space: nowrap;
+  }
+
+  .tm-metric-value {
+    display: block;
+    flex: none;
+    overflow: hidden;
+    color: hsl(var(--foreground));
+    font-size: var(--tm-stat-size);
+    font-variant-numeric: tabular-nums;
+    font-weight: 400;
+    letter-spacing: -0.06em;
+    line-height: 1;
+    text-overflow: ellipsis;
+    background: linear-gradient(180deg, hsl(var(--foreground)) 0%, hsl(var(--primary)) 145%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .tm-metric-label {
+    flex: none;
+    color: hsl(var(--muted-foreground));
+    font-size: calc(var(--tm-stat-size) * 0.5);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .tm-metric-ticks {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1px;
+    height: 0.8rem;
+    margin-top: auto;
+    padding-top: 0.42rem;
+    border-top: 1px solid hsl(var(--border) / 0.55);
+  }
+
+  .tm-metric-tick {
+    flex: 0 0 auto;
+    width: 1px;
+    height: 0.58rem;
+    border-radius: 1px;
+    background: hsl(var(--primary) / 0.5);
+  }
+
+  .tm-metric-tick:nth-child(5n) {
+    height: 0.76rem;
+    background: hsl(var(--primary) / 0.78);
+  }
+
+  /* ---- Map surface ---- */
+  .tm-stage {
+    position: relative;
+    overflow: hidden;
+    cursor: grab;
+    background: var(--tm-sea);
+    touch-action: none;
+  }
+
+  .travel-map.is-panning .tm-stage {
+    cursor: grabbing;
+  }
+
+  .tm-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  .tm-sea {
+    fill: var(--tm-sea);
+  }
+
+  .tm-province {
+    fill: var(--tm-land);
+    stroke: var(--tm-boundary);
+    stroke-width: 1;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+    cursor: pointer;
+    transition:
+      fill 180ms ease,
+      opacity 180ms ease;
+  }
+
+  .tm-province.is-visited {
+    fill: var(--tm-visited);
+  }
+
+  .tm-province:hover {
+    fill: hsl(var(--primary) / 0.2);
+  }
+
+  .tm-province.is-visited:hover {
+    fill: hsl(var(--primary) / 0.24);
+  }
+
+  .travel-map.is-province-view .tm-province {
+    opacity: 0.18;
+  }
+
+  .travel-map.is-province-view .tm-province.is-active {
+    opacity: 1;
+    fill: hsl(var(--primary) / 0.1);
+    stroke: hsl(var(--primary) / 0.55);
+    stroke-width: 1.6;
+  }
+
+  .tm-province-label {
+    fill: var(--tm-province-ink);
+    font-size: var(--tm-province-font, 14px);
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    paint-order: stroke;
+    pointer-events: none;
+    stroke: var(--tm-sea);
+    stroke-linejoin: round;
+    stroke-width: var(--tm-label-halo, 4px);
+    text-anchor: middle;
+    transition: opacity 180ms ease;
+  }
+
+  .tm-province-label.is-visited {
+    fill: hsl(var(--foreground) / 0.88);
+    font-weight: 600;
+  }
+
+  .travel-map.is-province-view .tm-province-label {
+    opacity: 0;
+  }
+
+  /* ---- City cells (boundary + name + marker) ---- */
+  /* Injected by JS, so they must be :global to avoid Astro scoping. */
+  :global(.tm-city-cell) {
+    pointer-events: none;
+  }
+
+  :global(.tm-city-cell.is-visited) {
+    pointer-events: auto;
+    cursor: pointer;
+  }
+
+  :global(.tm-city-boundary) {
+    fill: hsl(var(--primary) / 0.06);
+    stroke: hsl(var(--muted-foreground) / 0.28);
+    stroke-width: 0.7;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+    transition:
+      fill 180ms ease,
+      stroke 180ms ease;
+  }
+
+  :global(.tm-city-cell.is-visited .tm-city-boundary) {
+    fill: hsl(var(--primary) / 0.14);
+    stroke: hsl(var(--primary) / 0.3);
+  }
+
+  :global(.tm-city-cell.is-visited:hover .tm-city-boundary),
+  :global(.tm-city-cell.is-visited.is-selected .tm-city-boundary) {
+    fill: hsl(var(--primary) / 0.22);
+    stroke: hsl(var(--primary) / 0.5);
+  }
+
+  :global(.tm-city-cell-label) {
+    fill: var(--tm-city-ink);
+    font-size: var(--tm-city-font, 11px);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    paint-order: stroke;
+    pointer-events: none;
+    stroke: var(--tm-sea);
+    stroke-linejoin: round;
+    stroke-width: var(--tm-label-halo, 4px);
+    text-anchor: middle;
+  }
+
+  :global(.tm-city-cell.is-visited .tm-city-cell-label) {
+    fill: hsl(var(--foreground) / 0.92);
+    font-weight: 600;
+  }
+
+  :global(.tm-city-cell.is-visited:hover .tm-city-cell-label),
+  :global(.tm-city-cell.is-visited.is-selected .tm-city-cell-label) {
+    fill: hsl(var(--primary));
+  }
+
+  :global(.tm-city-cell-marker) {
+    transform: scale(var(--tm-marker-scale, 1));
+    transform-box: fill-box;
+    transform-origin: center;
+    pointer-events: none;
+  }
+
+  :global(.tm-city-cell-ring) {
+    fill: none;
+    stroke: var(--tm-accent);
+    stroke-width: 1.1;
+    opacity: var(--ring-opacity, 0.6);
+  }
+
+  :global(.tm-city-cell-dot) {
+    fill: var(--tm-accent);
+    stroke: var(--tm-sea);
+    stroke-width: 1.1;
+  }
+
+  /* ---- South China Sea inset ---- */
+  .tm-inset {
+    pointer-events: none;
+    transition: opacity 220ms ease;
+  }
+
+  .travel-map.is-zoomed .tm-inset {
+    opacity: 0;
+  }
+
+  .tm-inset-box {
+    fill: hsl(var(--background) / 0.35);
+    stroke: hsl(var(--muted-foreground) / 0.35);
+    stroke-dasharray: 3 3;
+    stroke-width: 0.8;
+  }
+
+  .tm-inset-label {
+    fill: hsl(var(--muted-foreground) / 0.7);
+    font-size: 9px;
+    letter-spacing: 0.08em;
+  }
+
+  .tm-inset-dash {
+    fill: hsl(var(--muted-foreground) / 0.4);
+    stroke: hsl(var(--muted-foreground) / 0.5);
+    stroke-width: 0.6;
+  }
+
+  .tm-inset-island {
+    fill: hsl(var(--muted-foreground) / 0.45);
+  }
+
+  /* ---- Back control ---- */
+  .tm-back {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 20;
+    display: inline-flex;
+    height: 2rem;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0 0.7rem;
+    border: 1px solid hsl(var(--border));
+    border-radius: 999px;
+    background: hsl(var(--background) / 0.82);
+    box-shadow: 0 4px 16px hsl(0 0% 0% / 0.08);
+    color: hsl(var(--foreground));
+    font-size: 0.7rem;
+    line-height: 1;
+    backdrop-filter: blur(8px);
+    transition:
+      color 150ms ease,
+      border-color 150ms ease,
+      background 150ms ease;
+  }
+
+  .tm-back[hidden] {
+    display: none;
+  }
+
+  .tm-back:hover,
+  .tm-back:focus-visible {
+    border-color: hsl(var(--primary) / 0.5);
+    background: hsl(var(--primary) / 0.08);
+    color: hsl(var(--primary));
+  }
+
+  /* ---- City record panel ---- */
+  .tm-record {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 24;
+    width: min(300px, calc(100% - 24px));
+    max-height: calc(100% - 24px);
+    overflow-y: auto;
+    padding: 0.8rem 0.85rem 0.85rem;
+    border: 1px solid hsl(var(--border));
+    border-radius: 0.6rem;
+    background: hsl(var(--popover) / 0.97);
+    box-shadow: 0 16px 40px hsl(0 0% 0% / 0.16);
+    color: hsl(var(--popover-foreground));
+    backdrop-filter: blur(12px);
+  }
+
+  .tm-record[hidden] {
+    display: none;
+  }
+
+  .tm-record-close {
+    position: absolute;
+    top: 0.4rem;
+    right: 0.45rem;
+    display: inline-flex;
+    width: 1.3rem;
+    height: 1.3rem;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: hsl(var(--muted-foreground));
+    font-size: 0.9rem;
+    line-height: 1;
+    transition:
+      color 150ms ease,
+      background 150ms ease;
+  }
+
+  .tm-record-close:hover,
+  .tm-record-close:focus-visible {
+    background: hsl(var(--muted));
+    color: hsl(var(--foreground));
+  }
+
+  .tm-record-city {
+    display: block;
+    padding-right: 1.4rem;
+    color: hsl(var(--foreground));
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+
+  .tm-record-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    margin: 0.55rem 0 0;
+    padding: 0.5rem 0 0;
+    border-top: 1px solid hsl(var(--border) / 0.65);
+    list-style: none;
+  }
+
+  .tm-record-list li {
+    margin: 0;
+  }
+
+  :global(.tm-record-list a) {
+    display: grid;
+    grid-template-columns: 5.4rem 1fr;
+    column-gap: 0.55rem;
+    align-items: baseline;
+    padding: 0.32rem 0;
+    border-radius: 0.3rem;
+    color: hsl(var(--foreground));
+    text-decoration: none;
+    transition: background 150ms ease;
+  }
+
+  :global(.tm-record-list a:hover),
+  :global(.tm-record-list a:focus-visible) {
+    background: hsl(var(--muted) / 0.55);
+  }
+
+  :global(.tm-record-list a:focus) {
+    outline: none;
+  }
+
+  :global(.tm-record-list time) {
+    color: hsl(var(--muted-foreground));
+    font-size: 0.62rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    line-height: 1.5;
+  }
+
+  :global(.tm-record-list span) {
+    display: -webkit-box;
+    overflow: hidden;
+    color: hsl(var(--foreground) / 0.82);
+    font-size: 0.72rem;
+    line-height: 1.5;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  :global(.tm-record-list a:hover span),
+  :global(.tm-record-list a:focus-visible span) {
+    color: hsl(var(--primary));
+  }
+
+  :global(.dark) .travel-map {
+    --tm-sea: hsl(210 30% 8%);
+    --tm-land: hsl(240 8% 12%);
+    --tm-visited: hsl(var(--primary) / 0.12);
+    --tm-boundary: hsl(0 0% 100% / 0.18);
+    --tm-province-ink: hsl(0 0% 72%);
+    --tm-city-ink: hsl(0 0% 76%);
+    --tm-accent: hsl(8 80% 64%);
+    --tm-accent-soft: hsl(8 80% 64% / 0.2);
+  }
+
+  :global(.dark) .tm-metric-value {
+    background: linear-gradient(180deg, hsl(var(--foreground)) 10%, hsl(var(--primary)) 130%);
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
+
+  :global(.dark) .tm-province.is-visited:hover {
+    fill: hsl(var(--primary) / 0.22);
+  }
+
+  :global(.dark) .tm-province-label.is-visited {
+    fill: hsl(var(--foreground) / 0.9);
+  }
+
+  :global(.dark .tm-city-boundary) {
+    fill: hsl(var(--primary) / 0.05);
+    stroke: hsl(0 0% 100% / 0.2);
+  }
+
+  :global(.dark .tm-city-cell.is-visited .tm-city-boundary) {
+    fill: hsl(var(--primary) / 0.16);
+    stroke: hsl(var(--primary) / 0.38);
+  }
+
+  @media (max-width: 600px) {
+    .tm-metric {
+      --tm-stat-size: clamp(1.4rem, 6.8vw, 1.9rem);
+      padding: 0.7rem 0.7rem 0.6rem;
+    }
+
+    .tm-metric-head {
+      gap: 0.35rem;
+    }
+
+    .tm-metric-label {
+      letter-spacing: 0.02em;
+    }
+
+    .tm-metric-ticks {
+      height: 0.7rem;
+      padding-top: 0.32rem;
+    }
+
+    .tm-metric-tick {
+      height: 0.42rem;
+    }
+
+    .tm-metric-tick:nth-child(5n) {
+      height: 0.56rem;
+    }
+
+    .tm-back {
+      top: 8px;
+      right: 8px;
+      height: 1.8rem;
+    }
+
+    .tm-record {
+      width: min(280px, calc(100% - 20px));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tm-province,
+    .tm-province-label,
+    .tm-inset,
+    .tm-back,
+    .tm-record {
+      transition: none;
+    }
+
+    :global(.tm-city-boundary),
+    :global(.tm-city-cell-label) {
+      transition: none;
+    }
+  }
+</style>

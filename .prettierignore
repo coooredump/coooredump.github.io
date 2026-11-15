@@ -1,3 +1,5 @@
 node_modules/**
 src/icons/**
 public/scripts/*
+src/data/china-map.generated.ts
+src/data/china-cities.generated.ts

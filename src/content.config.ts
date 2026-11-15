@@ -34,6 +34,9 @@ const blog = defineCollection({
         .optional(),
       tags: z.array(z.string()).default([]).transform(removeDupsAndLowerCase),
       language: z.string().optional(),
+      // Optional travel metadata for the About page map.
+      province: z.string().optional(),
+      city: z.string().optional(),
       draft: z.boolean().default(false),
       // Special fields
       comment: z.boolean().default(true)
