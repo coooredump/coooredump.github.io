@@ -1,0 +1,157 @@
+---
+interface Props {
+  title: string
+  items: string[]
+  variant?: 'bought' | 'wishlist'
+}
+
+const { title, items, variant = 'bought' } = Astro.props
+---
+
+<article class:list={['goods-receipt', variant === 'wishlist' && 'is-wishlist']}>
+  <header class='receipt-head'>
+    <span class='receipt-kicker'>GOODS / {variant === 'bought' ? 'OWNED' : 'WISHLIST'}</span>
+    <span class='receipt-title'>{title}</span>
+    <span class='receipt-count'>{String(items.length).padStart(2, '0')}</span>
+  </header>
+  <ul class='receipt-list'>
+    {
+      items.map((item, index) => (
+        <li>
+          <span class='receipt-no'>{String(index + 1).padStart(2, '0')}</span>
+          <span class='receipt-name'>{item}</span>
+          <span class='receipt-mark' aria-hidden='true'>
+            {variant === 'bought' ? '✓' : '○'}
+          </span>
+        </li>
+      ))
+    }
+  </ul>
+  <footer class='receipt-foot'>
+    <span>TOTAL {items.length} ITEMS</span>
+    <span>NO. 2023—2026</span>
+  </footer>
+  <div class='receipt-barcode' aria-hidden='true'></div>
+</article>
+
+<style>
+  .goods-receipt {
+    display: flex;
+    flex-direction: column;
+    padding: 1.05rem 1.1rem 0.9rem;
+    border: 1px solid hsl(var(--border));
+    border-radius: 2px;
+    background: hsl(var(--card));
+    box-shadow: 0 1px 0 hsl(var(--border) / 0.6);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  .receipt-head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.15rem 0.75rem;
+    align-items: baseline;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px dashed hsl(var(--border));
+  }
+
+  .receipt-kicker {
+    grid-column: 1 / -1;
+    color: hsl(var(--primary));
+    font-size: 0.48rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+  }
+
+  .receipt-title {
+    color: hsl(var(--foreground));
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  .receipt-count {
+    color: hsl(var(--muted-foreground));
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.08em;
+  }
+
+  .receipt-list {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    margin: 0;
+    padding: 0.2rem 0;
+    list-style: none;
+  }
+
+  .receipt-list li {
+    display: grid;
+    grid-template-columns: 1.6rem minmax(0, 1fr) auto;
+    gap: 0.45rem;
+    align-items: baseline;
+    margin: 0;
+    padding: 0.38rem 0;
+    border-bottom: 1px dashed hsl(var(--border) / 0.55);
+  }
+
+  .receipt-list li:last-child {
+    border-bottom: 0;
+  }
+
+  .receipt-no {
+    color: hsl(var(--muted-foreground) / 0.65);
+    font-size: 0.52rem;
+    letter-spacing: 0.04em;
+  }
+
+  .receipt-name {
+    color: hsl(var(--foreground) / 0.86);
+    font-size: 0.66rem;
+    line-height: 1.5;
+  }
+
+  .receipt-mark {
+    color: hsl(var(--primary));
+    font-size: 0.7rem;
+    line-height: 1;
+  }
+
+  .receipt-foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 0.45rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed hsl(var(--border));
+    color: hsl(var(--muted-foreground));
+    font-size: 0.5rem;
+    letter-spacing: 0.1em;
+  }
+
+  .receipt-barcode {
+    height: 26px;
+    margin-top: 0.7rem;
+    opacity: 0.55;
+    background: repeating-linear-gradient(
+      90deg,
+      hsl(var(--foreground)) 0 1px,
+      transparent 1px 3px,
+      hsl(var(--foreground)) 3px 4px,
+      transparent 4px 7px,
+      hsl(var(--foreground)) 7px 9px,
+      transparent 9px 11px
+    );
+  }
+
+  .goods-receipt.is-wishlist {
+    border-style: dashed;
+    background: hsl(var(--muted) / 0.28);
+  }
+
+  .goods-receipt.is-wishlist .receipt-kicker,
+  .goods-receipt.is-wishlist .receipt-mark {
+    color: hsl(var(--muted-foreground));
+  }
+</style>

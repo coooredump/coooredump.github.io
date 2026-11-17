@@ -1,0 +1,196 @@
+---
+interface Props {
+  title: string
+  items: string[]
+  tone?: 'done' | 'todo'
+}
+
+const { title, items, tone = 'done' } = Astro.props
+
+const TINTS = [
+  'hsl(210 34% 56% / 0.42)',
+  'hsl(28 42% 58% / 0.4)',
+  'hsl(150 24% 48% / 0.38)',
+  'hsl(340 30% 62% / 0.36)',
+  'hsl(45 44% 56% / 0.38)',
+  'hsl(265 26% 62% / 0.36)',
+  'hsl(190 30% 48% / 0.36)',
+  'hsl(12 36% 58% / 0.36)'
+]
+
+const books = items.map((item, index) => {
+  const label = item.replace(/[《》]/g, '').trim()
+  const length = Math.max(2, label.length)
+  const height = Math.min(168, 96 + length * 5)
+  const fontSize = length > 14 ? 9.5 : length > 10 ? 10.5 : 11.5
+  return {
+    label,
+    tint: TINTS[index % TINTS.length],
+    height,
+    fontSize
+  }
+})
+---
+
+<section class:list={['book-shelf', tone === 'todo' && 'is-todo']}>
+  <header class='book-shelf-head'>
+    <span class='book-shelf-title'>{title}</span>
+    <span class='book-shelf-count'>{items.length}<small>本</small></span>
+  </header>
+  <div class='book-shelf-grid'>
+    {
+      books.map((book) => (
+        <span
+          class='book-spine'
+          style={`--spine-tint:${book.tint};--spine-h:${book.height}px;--spine-fs:${book.fontSize}px`}
+          title={book.label}
+        >
+          <span class='book-spine-title'>{book.label}</span>
+        </span>
+      ))
+    }
+  </div>
+</section>
+
+<style>
+  .book-shelf {
+    margin: 0.35rem 0 1.6rem;
+  }
+
+  .book-shelf-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid hsl(var(--border) / 0.7);
+  }
+
+  .book-shelf-title {
+    color: hsl(var(--foreground));
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+  }
+
+  .book-shelf-count {
+    color: hsl(var(--muted-foreground));
+    font-size: 0.65rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .book-shelf-count small {
+    margin-left: 0.15rem;
+    font-size: 0.55rem;
+  }
+
+  /* Shelf boards are painted with a repeating background line, so every
+     row of books sits on a board without extra wrappers. */
+  .book-shelf-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(34px, 1fr));
+    grid-auto-rows: 176px;
+    column-gap: 5px;
+    row-gap: 0;
+    padding-top: 8px;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0 167px,
+      hsl(var(--border) / 0.95) 167px 170px,
+      hsl(var(--muted-foreground) / 0.32) 170px 176px
+    );
+  }
+
+  .book-spine {
+    position: relative;
+    display: flex;
+    align-self: end;
+    align-items: center;
+    height: var(--spine-h, 140px);
+    justify-content: center;
+    overflow: hidden;
+    padding: 10px 3px 8px;
+    border: 1px solid hsl(var(--border) / 0.55);
+    border-bottom: 0;
+    border-radius: 2px 2px 0 0;
+    background:
+      linear-gradient(180deg, hsl(0 0% 100% / 0.2), transparent 22%),
+      var(--spine-tint, hsl(var(--muted)));
+    box-shadow:
+      inset -3px 0 5px hsl(0 0% 0% / 0.06),
+      inset 1px 0 0 hsl(0 0% 100% / 0.22);
+    transition:
+      transform 180ms ease,
+      box-shadow 180ms ease,
+      opacity 180ms ease;
+  }
+
+  .book-spine::before,
+  .book-spine::after {
+    position: absolute;
+    right: 4px;
+    left: 4px;
+    height: 1px;
+    background: hsl(var(--foreground) / 0.18);
+    content: '';
+  }
+
+  .book-spine::before {
+    top: 9px;
+  }
+
+  .book-spine::after {
+    bottom: 6px;
+  }
+
+  .book-spine-title {
+    color: hsl(var(--foreground));
+    font-size: var(--spine-fs, 11px);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    line-height: 1.15;
+    overflow: hidden;
+    text-orientation: mixed;
+    white-space: nowrap;
+    writing-mode: vertical-rl;
+  }
+
+  .book-spine:hover {
+    z-index: 2;
+    box-shadow: 0 10px 20px hsl(0 0% 0% / 0.14);
+    transform: translateY(-5px);
+  }
+
+  .book-shelf.is-todo .book-spine {
+    opacity: 0.78;
+  }
+
+  .book-shelf.is-todo .book-spine:hover {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .book-spine {
+      transition: none;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .book-shelf-grid {
+      grid-template-columns: repeat(auto-fill, minmax(29px, 1fr));
+      grid-auto-rows: 168px;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0 159px,
+        hsl(var(--border) / 0.95) 159px 162px,
+        hsl(var(--muted-foreground) / 0.32) 162px 168px
+      );
+    }
+
+    .book-spine {
+      height: min(var(--spine-h, 140px), 160px);
+      padding-right: 2px;
+      padding-left: 2px;
+    }
+  }
+</style>

@@ -1,0 +1,199 @@
+---
+interface Props {
+  title: string
+  items: string[]
+  tone?: 'watched' | 'unwatched'
+}
+
+const { title, items, tone = 'watched' } = Astro.props
+
+const TINTS = [
+  'hsl(210 45% 52% / 0.6)',
+  'hsl(32 50% 52% / 0.55)',
+  'hsl(150 32% 45% / 0.55)',
+  'hsl(340 36% 52% / 0.5)',
+  'hsl(265 34% 58% / 0.5)',
+  'hsl(45 52% 52% / 0.5)',
+  'hsl(190 38% 45% / 0.5)',
+  'hsl(12 44% 52% / 0.5)'
+]
+
+const frames = items.map((item, index) => ({
+  label: item,
+  index: String(index + 1).padStart(3, '0'),
+  tint: TINTS[index % TINTS.length]
+}))
+---
+
+<section class:list={['film-block', tone === 'unwatched' && 'is-unwatched']}>
+  <header class='film-head'>
+    <span class='film-head-title'>{title}</span>
+    <span class='film-head-meta'>{items.length} 部 <span aria-hidden='true'>→</span></span>
+  </header>
+  <div class='film-reel'>
+    <div class='film-track' tabindex='0' aria-label={`${title}片单，可横向滚动`}>
+      {
+        frames.map((frame) => (
+          <figure class='film-frame' style={`--frame-tint:${frame.tint}`}>
+            <span class='film-index'>{frame.index}</span>
+            <figcaption>{frame.label}</figcaption>
+          </figure>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .film-block {
+    margin: 0.35rem 0 1.5rem;
+  }
+
+  .film-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid hsl(var(--border) / 0.7);
+  }
+
+  .film-head-title {
+    color: hsl(var(--foreground));
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+  }
+
+  .film-head-meta {
+    color: hsl(var(--muted-foreground));
+    font-size: 0.62rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+  }
+
+  .film-reel {
+    position: relative;
+    margin-top: 0.6rem;
+    overflow: hidden;
+    padding: 18px 0;
+    border-radius: 8px;
+    background: hsl(220 10% 9%);
+  }
+
+  /* Sprocket holes along the top and bottom edges of the strip. */
+  .film-reel::before,
+  .film-reel::after {
+    position: absolute;
+    z-index: 2;
+    right: 0;
+    left: 0;
+    height: 14px;
+    background-image: radial-gradient(
+      circle at 10px 7px,
+      hsl(40 20% 92% / 0.9) 4px,
+      transparent 4.4px
+    );
+    background-repeat: repeat-x;
+    background-size: 24px 14px;
+    pointer-events: none;
+    content: '';
+  }
+
+  .film-reel::before {
+    top: 2px;
+  }
+
+  .film-reel::after {
+    bottom: 2px;
+  }
+
+  .film-track {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 6px 18px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 22px), transparent 100%);
+    mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 22px), transparent 100%);
+  }
+
+  .film-track::-webkit-scrollbar {
+    display: none;
+  }
+
+  .film-frame {
+    display: flex;
+    flex: 0 0 148px;
+    height: 198px;
+    flex-direction: column;
+    justify-content: space-between;
+    margin: 0;
+    padding: 12px 10px 10px;
+    border: 1px solid hsl(0 0% 100% / 0.18);
+    border-radius: 2px;
+    background: linear-gradient(160deg, var(--frame-tint), hsl(220 10% 14%));
+    scroll-snap-align: start;
+    transition:
+      transform 180ms ease,
+      border-color 180ms ease;
+  }
+
+  .film-frame:hover {
+    border-color: hsl(45 60% 72% / 0.7);
+    transform: translateY(-4px);
+  }
+
+  .film-index {
+    color: hsl(0 0% 100% / 0.55);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.5rem;
+    letter-spacing: 0.14em;
+  }
+
+  .film-frame figcaption {
+    display: -webkit-box;
+    overflow: hidden;
+    color: hsl(0 0% 96%);
+    font-size: 0.78rem;
+    font-weight: 500;
+    line-height: 1.4;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+  }
+
+  .film-block.is-unwatched .film-frame {
+    border-style: dashed;
+    border-color: hsl(0 0% 100% / 0.3);
+    background: hsl(220 10% 12%);
+  }
+
+  .film-block.is-unwatched .film-frame figcaption {
+    color: hsl(0 0% 80%);
+    font-weight: 400;
+  }
+
+  .film-track:focus-visible {
+    outline: 1px solid hsl(var(--primary) / 0.5);
+    outline-offset: -2px;
+  }
+
+  @media (max-width: 600px) {
+    .film-frame {
+      flex-basis: 132px;
+      height: 182px;
+    }
+
+    .film-track {
+      padding-right: 14px;
+      padding-left: 14px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .film-frame {
+      transition: none;
+    }
+  }
+</style>
