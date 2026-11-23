@@ -17,7 +17,7 @@ const { header: headerName, content: contentName, needPercent = true } = Astro.p
     <div
       class='top-text absolute bottom-0 end-0 start-0 top-0 flex items-center justify-center group-[.ended]:opacity-0'
     >
-      <span class='text'>10</span>
+      <span class='text'>0</span>
       <span class='text-xs'>%</span>
     </div>
     <Icon name='up' class='top-icon group-[.ended]:opacity-100' />
@@ -47,26 +47,66 @@ const { header: headerName, content: contentName, needPercent = true } = Astro.p
   } else {
     console.error(`Element with ID ${headerName} not found.`)
   }
-  if (needPercent) {
-    // scroll percentage
-    const scrollHeight = articleElement.scrollHeight // total height
-    const articleTop = articleElement.offsetTop // article top
-    const clientHeight = document.documentElement.clientHeight // client height
+  if (needPercent && articleElement && scrollPercentEl) {
+    // Reading progress. Locked posts start as a short lock screen and grow
+    // after the body is decrypted, so never cache the article height once:
+    // re-measure whenever the article or the viewport changes.
+    let articleTop = articleElement.offsetTop
+    let articleHeight = articleElement.scrollHeight
+    let clientHeight = document.documentElement.clientHeight
 
-    function calculateScrollPercent() {
-      const scrollTop = document.documentElement.scrollTop || document.body.scrollTop
-      if (scrollTop < articleTop) return
-      return Math.round(((scrollTop - articleTop) / (scrollHeight - clientHeight)) * 100)
+    function measure() {
+      articleTop = articleElement.offsetTop
+      articleHeight = articleElement.scrollHeight
+      clientHeight = document.documentElement.clientHeight
     }
 
-    document.addEventListener('scroll', () => {
-      const scrollPercent = calculateScrollPercent()
-      if (scrollPercent === undefined) return
-      scrollPercentEl.innerText = scrollPercent.toString()
+    function updatePercent() {
+      const scrollTop =
+        window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0
+      const scrollable = articleHeight - clientHeight
+      // An article shorter than the viewport is already fully visible; use 100
+      // instead of dividing by a negative/zero scrollable height.
+      const percent =
+        scrollable > 0
+          ? Math.max(0, Math.min(100, Math.round(((scrollTop - articleTop) / scrollable) * 100)))
+          : 100
 
-      // If percent is 100, percent won't need to show
-      actionBtns.classList.toggle('ended', scrollPercent > 100)
-    })
+      scrollPercentEl.innerText = percent.toString()
+
+      // The percentage is redundant once reading is complete.
+      actionBtns.classList.toggle('ended', percent >= 100)
+    }
+
+    measure()
+    updatePercent()
+
+    document.addEventListener('scroll', updatePercent, { passive: true })
+    window.addEventListener(
+      'resize',
+      () => {
+        measure()
+        updatePercent()
+      },
+      { passive: true }
+    )
+
+    if (typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(() => {
+        measure()
+        updatePercent()
+      }).observe(articleElement)
+    }
+
+    // Locked content is decrypted into the article after load. Mutations
+    // (innerHTML, `hidden` removal, display changes) are observed separately
+    // from size changes so the percentage is correct before the next frame.
+    if (typeof MutationObserver !== 'undefined') {
+      new MutationObserver(() => {
+        measure()
+        updatePercent()
+      }).observe(articleElement, { childList: true, subtree: true, attributes: true })
+    }
   } else {
     actionBtns.classList.add('ended')
   }
